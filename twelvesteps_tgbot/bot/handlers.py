@@ -2837,6 +2837,14 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
 
     logger.info(f"Profile callback received: {data} from user {telegram_id}")
 
+    if data == "profile_back_to_settings":
+        await callback.message.edit_text(
+            "⚙️ Настройки\n\nВыбери раздел настроек:",
+            reply_markup=build_main_settings_markup()
+        )
+        await callback.answer()
+        return
+
     try:
         token = await get_or_fetch_token(telegram_id, username, first_name)
         if not token:
