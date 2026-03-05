@@ -1345,7 +1345,7 @@ async def handle_thanks(message: Message, state: FSMContext) -> None:
 
 async def handle_feelings(message: Message, state: FSMContext) -> None:
     """Handle Feelings button - show feelings categories menu"""
-    await state.clear()
+    await state.clear()  # Сбрасываем любое предыдущее состояние
     await message.answer("📘 Чувства", reply_markup=build_all_feelings_markup())
 
 
@@ -2283,7 +2283,7 @@ async def handle_about_entry_input(message: Message, state: FSMContext) -> None:
 
 async def handle_thanks_menu(message: Message, state: FSMContext) -> None:
     """Handle gratitude button - show gratitude menu"""
-    await state.clear()
+    await state.clear()  # Сбрасываем любое предыдущее состояние
     thanks_text = (
         "🙏 Благодарности\n\n"
         "Благодарность помогает переключить мышление и снизить тревогу.\n\n"
@@ -2623,8 +2623,8 @@ async def handle_day(message: Message, state: FSMContext) -> None:
     telegram_id = message.from_user.id
     username = message.from_user.username
     first_name = message.from_user.first_name
-    
-        await state.clear()
+
+    await state.clear()  # Сбрасываем любое предыдущее состояние
 
     try:
         token = await get_or_fetch_token(telegram_id, username, first_name)
@@ -5106,5 +5106,3 @@ async def handle_template_field_input(message: Message, state: FSMContext) -> No
         logger.exception("Error handling template field input for %s: %s", telegram_id, exc)
         await message.answer("Произошла ошибка. Попробуй ещё раз.")
         await state.clear()
-
-
