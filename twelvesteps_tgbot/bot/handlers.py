@@ -1740,20 +1740,27 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
                     answers_data = await BACKEND_CLIENT.get_user_answers_for_section(token, section_id)
                     answers = answers_data.get("answers", []) if answers_data else []
                     
-                    has_content = len(answers) > 0 or len(entries) > 0
+                    history_data = await BACKEND_CLIENT.get_section_history(token, section_id, limit=1)
+                    history_total = history_data.get("total", 0) if history_data else 0
+                    
+                    has_content = len(answers) > 0 or history_total > 0
                     
                     if has_content:
-                        status = f"✅ {len(answers)} ответов"
-                        if entries:
-                            status += f", {len(entries)} записей"
+                        status_parts = []
+                        if len(answers) > 0:
+                            status_parts.append(f"{len(answers)} отв.")
+                        if history_total > 0:
+                            status_parts.append(f"{history_total} зап.")
+                        status = "✅ " + ", ".join(status_parts)
                     else:
                         status = "📝 Не заполнено"
                     
-                    text_parts.append(f"\n{section_icon} {section_name}: {status}")
+                    # section_name уже содержит иконку - не дублируем section_icon
+                    text_parts.append(f"\n{section_name}: {status}")
                     
                     if has_content:
                         buttons.append([InlineKeyboardButton(
-                            text=f"{section_icon} {section_name}",
+                            text=f"{section_name}",
                             callback_data=f"profile_settings_view_{section_id}"
                         )])
                 
