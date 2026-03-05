@@ -1207,6 +1207,7 @@ async def create_custom_section(
         section_data.name,
         section_data.icon
     )
+    await current_user.session.commit()
 
     return {
         "status": "success",
