@@ -969,10 +969,10 @@ async def handle_sos_callback(callback: CallbackQuery, state: FSMContext) -> Non
             await state.clear()
             await edit_long_message(
                 callback,
-                "Главное меню:",
+                "🏠",
                 reply_markup=None
             )
-            await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
+            await callback.message.answer("🏠", reply_markup=build_main_menu_markup())
             await safe_answer_callback(callback)
             return
 
@@ -1175,7 +1175,7 @@ async def handle_sos_callback(callback: CallbackQuery, state: FSMContext) -> Non
                 "✅ Черновик сохранён.\n\nВернулся в главное меню.",
                 reply_markup=None
             )
-            await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
+            await callback.message.answer("🏠", reply_markup=build_main_menu_markup())
             await safe_answer_callback(callback, "Черновик сохранён")
             return
 
@@ -1186,7 +1186,7 @@ async def handle_sos_callback(callback: CallbackQuery, state: FSMContext) -> Non
                 "✅ Помощь завершена.\n\nВернулся в главное меню.",
                 reply_markup=None
             )
-            await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
+            await callback.message.answer("🏠", reply_markup=build_main_menu_markup())
             await safe_answer_callback(callback)
             return
 
@@ -1346,7 +1346,11 @@ async def handle_thanks(message: Message, state: FSMContext) -> None:
 
 async def handle_feelings(message: Message, state: FSMContext) -> None:
     """Handle Feelings button - show feelings categories menu"""
-    await state.clear()  # Сбрасываем любое предыдущее состояние
+    await state.clear()
+    try:
+        await message.delete()
+    except Exception:
+        pass
     await message.answer("📘 Чувства", reply_markup=build_all_feelings_markup())
 
 
@@ -1356,7 +1360,7 @@ async def handle_feelings_callback(callback: CallbackQuery, state: FSMContext) -
 
     if data == "feelings_back":
         await callback.message.delete()
-        await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
+        await callback.message.answer("🏠", reply_markup=build_main_menu_markup())
         await callback.answer()
         return
 
@@ -1413,6 +1417,10 @@ async def handle_feeling_selection_callback(callback: CallbackQuery, state: FSMC
 
 async def handle_faq(message: Message, state: FSMContext) -> None:
     """Handle FAQ command - show instructions menu"""
+    try:
+        await message.delete()
+    except Exception:
+        pass
     faq_text = "📎 ИНСТРУКЦИИ — КАК ЭТО РАБОТАЕТ\n\nВыбери раздел для просмотра:"
     await message.answer(faq_text, reply_markup=build_faq_menu_markup())
 
@@ -1423,7 +1431,7 @@ async def handle_faq_callback(callback: CallbackQuery, state: FSMContext) -> Non
 
     if data == "faq_back":
         await callback.message.delete()
-        await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
+        await callback.message.answer("🏠", reply_markup=build_main_menu_markup())
         await callback.answer()
         return
 
@@ -1454,6 +1462,10 @@ async def handle_faq_callback(callback: CallbackQuery, state: FSMContext) -> Non
 
 async def handle_main_settings(message: Message, state: FSMContext) -> None:
     """Handle main settings button - show settings menu"""
+    try:
+        await message.delete()
+    except Exception:
+        pass
     settings_text = (
         "⚙️ Настройки\n\n"
         "Выбери раздел настроек:"
@@ -1471,12 +1483,12 @@ async def handle_main_settings_callback(callback: CallbackQuery, state: FSMConte
     if data == "main_settings_back":
         try:
             await callback.message.edit_text(
-                "Главное меню:",
+                "🏠",
                 reply_markup=build_main_menu_markup()
             )
         except Exception:
             await callback.message.delete()
-            await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
+            await callback.message.answer("🏠", reply_markup=build_main_menu_markup())
         await callback.answer()
         return
 
@@ -2289,7 +2301,11 @@ async def handle_about_entry_input(message: Message, state: FSMContext) -> None:
 
 async def handle_thanks_menu(message: Message, state: FSMContext) -> None:
     """Handle gratitude button - show gratitude menu"""
-    await state.clear()  # Сбрасываем любое предыдущее состояние
+    await state.clear()
+    try:
+        await message.delete()
+    except Exception:
+        pass
     thanks_text = (
         "🙏 Благодарности\n\n"
         "Благодарность помогает переключить мышление и снизить тревогу.\n\n"
@@ -2307,7 +2323,7 @@ async def handle_thanks_callback(callback: CallbackQuery, state: FSMContext) -> 
 
     if data == "thanks_back":
         await callback.message.delete()
-        await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
+        await callback.message.answer("🏠", reply_markup=build_main_menu_markup())
         await callback.answer()
         return
 
