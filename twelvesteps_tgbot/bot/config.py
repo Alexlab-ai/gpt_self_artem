@@ -1,4 +1,4 @@
-"""Shared configuration and markup helpers for the Telegram frontend."""
+""Shared configuration and markup helpers for the Telegram frontend."""
 
 from __future__ import annotations
 
@@ -537,7 +537,7 @@ def build_about_me_main_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✍️ Свободный рассказ", callback_data="about_free_story")],
         [InlineKeyboardButton(text="👣 Пройти мини-опрос", callback_data="about_mini_survey")],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_back")]
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_back")]
     ])
 
 
@@ -941,3 +941,4 @@ def build_faq_section_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="◀️ К разделам", callback_data="faq_menu")]
     ])
+
