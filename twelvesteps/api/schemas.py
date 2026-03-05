@@ -225,7 +225,7 @@ class ProfileSectionDataSchema(BaseModel):
 
 
 class ProfileSectionDataCreateRequest(BaseModel):
-    section_id: int
+    section_id: Optional[int] = None
     content: str
     subblock_name: Optional[str] = None
     entity_type: Optional[str] = None
