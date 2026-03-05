@@ -582,7 +582,7 @@ def build_about_section_actions_markup(section_id: str) -> InlineKeyboardMarkup:
 
 
 def build_progress_step_markup(step_id: int, step_number: int, step_title: str) -> InlineKeyboardMarkup:
-    """Markup for viewing a specific step's progress."""
+    """Markup for viewing a specific steps progress."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📄 Посмотреть ответы", callback_data="progress_view_answers")],
         [InlineKeyboardButton(text="◀️ Назад", callback_data="progress_main")]
@@ -941,4 +941,5 @@ def build_faq_section_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="◀️ К разделам", callback_data="faq_menu")]
     ])
+
 
