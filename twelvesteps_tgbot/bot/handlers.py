@@ -1468,8 +1468,10 @@ async def handle_main_settings_callback(callback: CallbackQuery, state: FSMConte
     first_name = callback.from_user.first_name
 
     if data == "main_settings_back":
-        await callback.message.delete()
-        await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
+        await callback.message.edit_text(
+            "⚙️ Настройки",
+            reply_markup=build_main_settings_markup()
+        )
         await callback.answer()
         return
 
@@ -5106,3 +5108,4 @@ async def handle_template_field_input(message: Message, state: FSMContext) -> No
         logger.exception("Error handling template field input for %s: %s", telegram_id, exc)
         await message.answer("Произошла ошибка. Попробуй ещё раз.")
         await state.clear()
+
