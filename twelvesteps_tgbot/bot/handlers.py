@@ -1764,9 +1764,8 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
 
         if data == "profile_settings_back":
             await callback.message.edit_text(
-                "🪪 Мой профиль\n\n"
-                "Настройки профиля:",
-                reply_markup=build_profile_settings_markup()
+                "⚙️ Настройки",
+                reply_markup=build_main_settings_markup()
             )
             await callback.answer()
             return
