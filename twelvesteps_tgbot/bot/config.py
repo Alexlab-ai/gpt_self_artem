@@ -528,7 +528,7 @@ def build_profile_settings_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🪪 Расскажи о себе", callback_data="profile_settings_about")],
         [InlineKeyboardButton(text="📋 Информация обо мне", callback_data="profile_settings_info")],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="main_settings_back")]
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_back_to_settings")]
     ])
 
 
