@@ -550,6 +550,13 @@ def build_free_story_markup() -> InlineKeyboardMarkup:
     ])
 
 
+def build_free_story_history_markup() -> InlineKeyboardMarkup:
+    """Markup for history screen — Назад returns to Свободный рассказ."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="about_free_story")]
+    ])
+
+
 def build_free_story_add_entry_markup() -> InlineKeyboardMarkup:
     """Markup for adding free story entry (with back button)."""
     return InlineKeyboardMarkup(inline_keyboard=[
