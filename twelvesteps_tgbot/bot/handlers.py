@@ -54,6 +54,7 @@ from bot.config import (
     build_profile_settings_markup,
     build_about_me_main_markup,
     build_free_story_markup,
+    build_free_story_history_markup,
     build_free_story_add_entry_markup,
     build_section_history_markup,
     build_entry_detail_markup,
@@ -1970,7 +1971,7 @@ async def handle_about_callback(callback: CallbackQuery, state: FSMContext) -> N
 
                 if not entries:
                     history_text = "🗃️ История\n\n(История пока пуста)"
-                    markup = build_free_story_markup()
+                    markup = build_free_story_history_markup()
                 else:
                     history_text = f"🗃️ История\n\nВсего записей: {total}\n\n"
                     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -2016,8 +2017,8 @@ async def handle_about_callback(callback: CallbackQuery, state: FSMContext) -> N
                     if total > 10:
                         history_text += f"\n... и ещё {total - 10} записей"
 
-                    free_story_markup = build_free_story_markup()
-                    combined_buttons = entry_buttons + free_story_markup.inline_keyboard
+                    history_nav_markup = build_free_story_history_markup()
+                    combined_buttons = entry_buttons + history_nav_markup.inline_keyboard
                     markup = InlineKeyboardMarkup(inline_keyboard=combined_buttons)
 
                 try:
