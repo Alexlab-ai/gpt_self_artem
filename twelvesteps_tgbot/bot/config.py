@@ -117,12 +117,11 @@ def build_profile_sections_markup(sections: List[Dict[str, Any]]) -> InlineKeybo
 def build_profile_actions_markup(section_id: int) -> InlineKeyboardMarkup:
     """Build action buttons for a profile section."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="✍️ Свободный рассказ", callback_data=f"profile_free_text_{section_id}")],
         [
             InlineKeyboardButton(text="🗃️ История", callback_data=f"profile_history_{section_id}"),
             InlineKeyboardButton(text="➕ Добавить", callback_data=f"profile_add_entry_{section_id}")
         ],
-        [InlineKeyboardButton(text="⏪ Назад", callback_data="profile_back")]
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_back")]
     ])
 
 
