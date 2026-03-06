@@ -54,7 +54,6 @@ from bot.config import (
     build_profile_settings_markup,
     build_about_me_main_markup,
     build_free_story_markup,
-    build_free_story_history_markup,
     build_free_story_add_entry_markup,
     build_section_history_markup,
     build_entry_detail_markup,
@@ -969,10 +968,10 @@ async def handle_sos_callback(callback: CallbackQuery, state: FSMContext) -> Non
             await state.clear()
             await edit_long_message(
                 callback,
-                "​",
+                "Главное меню:",
                 reply_markup=None
             )
-            await callback.message.answer("​", reply_markup=build_main_menu_markup())
+            await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
             await safe_answer_callback(callback)
             return
 
@@ -1175,7 +1174,7 @@ async def handle_sos_callback(callback: CallbackQuery, state: FSMContext) -> Non
                 "✅ Черновик сохранён.\n\nВернулся в главное меню.",
                 reply_markup=None
             )
-            await callback.message.answer("​", reply_markup=build_main_menu_markup())
+            await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
             await safe_answer_callback(callback, "Черновик сохранён")
             return
 
@@ -1186,7 +1185,7 @@ async def handle_sos_callback(callback: CallbackQuery, state: FSMContext) -> Non
                 "✅ Помощь завершена.\n\nВернулся в главное меню.",
                 reply_markup=None
             )
-            await callback.message.answer("​", reply_markup=build_main_menu_markup())
+            await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
             await safe_answer_callback(callback)
             return
 
@@ -1346,11 +1345,6 @@ async def handle_thanks(message: Message, state: FSMContext) -> None:
 
 async def handle_feelings(message: Message, state: FSMContext) -> None:
     """Handle Feelings button - show feelings categories menu"""
-    await state.clear()
-    try:
-        await message.delete()
-    except Exception:
-        pass
     await message.answer("📘 Чувства", reply_markup=build_all_feelings_markup())
 
 
@@ -1360,7 +1354,7 @@ async def handle_feelings_callback(callback: CallbackQuery, state: FSMContext) -
 
     if data == "feelings_back":
         await callback.message.delete()
-        await callback.message.answer("​", reply_markup=build_main_menu_markup())
+        await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
         await callback.answer()
         return
 
@@ -1417,10 +1411,6 @@ async def handle_feeling_selection_callback(callback: CallbackQuery, state: FSMC
 
 async def handle_faq(message: Message, state: FSMContext) -> None:
     """Handle FAQ command - show instructions menu"""
-    try:
-        await message.delete()
-    except Exception:
-        pass
     faq_text = "📎 ИНСТРУКЦИИ — КАК ЭТО РАБОТАЕТ\n\nВыбери раздел для просмотра:"
     await message.answer(faq_text, reply_markup=build_faq_menu_markup())
 
@@ -1431,7 +1421,7 @@ async def handle_faq_callback(callback: CallbackQuery, state: FSMContext) -> Non
 
     if data == "faq_back":
         await callback.message.delete()
-        await callback.message.answer("​", reply_markup=build_main_menu_markup())
+        await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
         await callback.answer()
         return
 
@@ -1462,10 +1452,6 @@ async def handle_faq_callback(callback: CallbackQuery, state: FSMContext) -> Non
 
 async def handle_main_settings(message: Message, state: FSMContext) -> None:
     """Handle main settings button - show settings menu"""
-    try:
-        await message.delete()
-    except Exception:
-        pass
     settings_text = (
         "⚙️ Настройки\n\n"
         "Выбери раздел настроек:"
@@ -1481,14 +1467,8 @@ async def handle_main_settings_callback(callback: CallbackQuery, state: FSMConte
     first_name = callback.from_user.first_name
 
     if data == "main_settings_back":
-        try:
-            await callback.message.edit_text(
-                "​",
-                reply_markup=build_main_menu_markup()
-            )
-        except Exception:
-            await callback.message.delete()
-            await callback.message.answer("​", reply_markup=build_main_menu_markup())
+        await callback.message.delete()
+        await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
         await callback.answer()
         return
 
@@ -1740,27 +1720,20 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
                     answers_data = await BACKEND_CLIENT.get_user_answers_for_section(token, section_id)
                     answers = answers_data.get("answers", []) if answers_data else []
                     
-                    history_data = await BACKEND_CLIENT.get_section_history(token, section_id, limit=1)
-                    history_total = history_data.get("total", 0) if history_data else 0
-                    
-                    has_content = len(answers) > 0 or history_total > 0
+                    has_content = len(answers) > 0 or len(entries) > 0
                     
                     if has_content:
-                        status_parts = []
-                        if len(answers) > 0:
-                            status_parts.append(f"{len(answers)} отв.")
-                        if history_total > 0:
-                            status_parts.append(f"{history_total} зап.")
-                        status = "✅ " + ", ".join(status_parts)
+                        status = f"✅ {len(answers)} ответов"
+                        if entries:
+                            status += f", {len(entries)} записей"
                     else:
                         status = "📝 Не заполнено"
                     
-                    # section_name уже содержит иконку - не дублируем section_icon
-                    text_parts.append(f"\n{section_name}: {status}")
+                    text_parts.append(f"\n{section_icon} {section_name}: {status}")
                     
                     if has_content:
                         buttons.append([InlineKeyboardButton(
-                            text=f"{section_name}",
+                            text=f"{section_icon} {section_name}",
                             callback_data=f"profile_settings_view_{section_id}"
                         )])
                 
@@ -1784,8 +1757,9 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
 
         if data == "profile_settings_back":
             await callback.message.edit_text(
-                "⚙️ Настройки",
-                reply_markup=build_main_settings_markup()
+                "🪪 Мой профиль\n\n"
+                "Настройки профиля:",
+                reply_markup=build_profile_settings_markup()
             )
             await callback.answer()
             return
@@ -1984,49 +1958,81 @@ async def handle_about_callback(callback: CallbackQuery, state: FSMContext) -> N
                     )
                     return
 
-                # Загружаем все разделы пользователя
-                sections_data = await BACKEND_CLIENT.get_profile_sections(token)
-                sections = sections_data.get("sections", []) if sections_data else []
+                history_data = await BACKEND_CLIENT.get_free_text_history(token)
+                entries = history_data.get("entries", []) if history_data else []
+                total = history_data.get("total", 0) if history_data else 0
 
-                # Для каждого раздела проверяем наличие записей
-                from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-                section_buttons = []
-                for section in sections:
-                    section_id = section.get("id")
-                    section_name = section.get("name", "")
-                    if section_id == 14:  # Пропускаем "Свободный рассказ"
-                        continue
-                    history = await BACKEND_CLIENT.get_section_history(token, section_id, limit=1)
-                    count = history.get("total", 0) if history else 0
-                    if count > 0:
-                        section_buttons.append([
+                if not entries:
+                    history_text = "🗃️ История\n\n(История пока пуста)"
+                    markup = build_free_story_markup()
+                else:
+                    history_text = f"🗃️ История\n\nВсего записей: {total}\n\n"
+                    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+                    entry_buttons = []
+
+                    for i, entry in enumerate(entries[:10], 1):
+                        entry_id = entry.get("id")
+                        section_name = entry.get("section_name", "Неизвестный раздел")
+                        preview = entry.get("preview", "")
+                        created_at = entry.get("created_at", "")
+                        subblock = entry.get("subblock_name")
+
+                        date_str = ""
+                        if created_at:
+                            try:
+                                from datetime import datetime
+                                dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                                date_str = dt.strftime("%d.%m.%Y %H:%M")
+                            except:
+                                pass
+
+                        history_text += f"{i}. {section_name}\n"
+                        if subblock:
+                            history_text += f"   📌 {subblock}\n"
+                        if preview:
+                            history_text += f"   {preview}\n"
+                        if date_str:
+                            history_text += f"   📅 {date_str}\n"
+                        history_text += "\n"
+
+                        button_text = f"📝 {i}. {section_name}"
+                        if subblock:
+                            button_text += f" ({subblock})"
+                        if len(button_text) > 60:
+                            button_text = button_text[:57] + "..."
+                        entry_buttons.append([
                             InlineKeyboardButton(
-                                text=f"{section_name} ({count})",
-                                callback_data=f"profile_history_{section_id}"
+                                text=button_text,
+                                callback_data=f"profile_entry_{entry_id}"
                             )
                         ])
 
-                if not section_buttons:
-                    markup = build_free_story_history_markup()
-                    await edit_long_message(
-                        callback,
-                        "🗃️ История\n\n(История пока пуста)",
-                        reply_markup=markup
-                    )
-                else:
-                    section_buttons.append([
-                        InlineKeyboardButton(text="◀️ Назад", callback_data="about_free_story")
-                    ])
-                    markup = InlineKeyboardMarkup(inline_keyboard=section_buttons)
-                    await edit_long_message(
-                        callback,
-                        "🗃️ История\n\nВыбери раздел:",
-                        reply_markup=markup
-                    )
-                    logger.info(f"Showed history section selector with {len(section_buttons)-1} sections")
+                    if total > 10:
+                        history_text += f"\n... и ещё {total - 10} записей"
 
+                    free_story_markup = build_free_story_markup()
+                    combined_buttons = entry_buttons + free_story_markup.inline_keyboard
+                    markup = InlineKeyboardMarkup(inline_keyboard=combined_buttons)
+
+                try:
+                    await edit_long_message(
+                        callback,
+                        history_text,
+                        reply_markup=markup
+                    )
+                    logger.info(f"Successfully showed free story history with {len(entry_buttons) if entries else 0} entry buttons")
+                except Exception as e:
+                    logger.warning(f"Failed to edit message for free story history: {e}, sending new message")
+                    try:
+                        await callback.message.answer(
+                            history_text,
+                            reply_markup=markup
+                        )
+                        logger.info(f"Successfully sent new message for free story history with entry buttons")
+                    except Exception as e2:
+                        logger.error(f"Failed to send new message for free story history: {e2}")
             except Exception as e:
-                logger.exception("Error loading history sections: %s", e)
+                logger.exception("Error loading history: %s", e)
                 await edit_long_message(
                     callback,
                     "🗃️ История\n\n❌ Ошибка при загрузке истории. Попробуй позже.",
@@ -2276,11 +2282,6 @@ async def handle_about_entry_input(message: Message, state: FSMContext) -> None:
 
 async def handle_thanks_menu(message: Message, state: FSMContext) -> None:
     """Handle gratitude button - show gratitude menu"""
-    await state.clear()
-    try:
-        await message.delete()
-    except Exception:
-        pass
     thanks_text = (
         "🙏 Благодарности\n\n"
         "Благодарность помогает переключить мышление и снизить тревогу.\n\n"
@@ -2298,7 +2299,7 @@ async def handle_thanks_callback(callback: CallbackQuery, state: FSMContext) -> 
 
     if data == "thanks_back":
         await callback.message.delete()
-        await callback.message.answer("​", reply_markup=build_main_menu_markup())
+        await callback.message.answer("Главное меню:", reply_markup=build_main_menu_markup())
         await callback.answer()
         return
 
@@ -2621,7 +2622,10 @@ async def handle_day(message: Message, state: FSMContext) -> None:
     username = message.from_user.username
     first_name = message.from_user.first_name
 
-    await state.clear()  # Сбрасываем любое предыдущее состояние
+    current_state = await state.get_state()
+    if current_state == StepState.answering or current_state == StepState.filling_template:
+        await state.clear()
+        logger.info(f"Cleared step state for user {telegram_id} when switching to /day")
 
     try:
         token = await get_or_fetch_token(telegram_id, username, first_name)
@@ -2827,14 +2831,6 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
     first_name = callback.from_user.first_name
 
     logger.info(f"Profile callback received: {data} from user {telegram_id}")
-
-    if data == "profile_back_to_settings":
-        await callback.message.edit_text(
-            "⚙️ Настройки\n\nВыбери раздел настроек:",
-            reply_markup=build_main_settings_markup()
-        )
-        await callback.answer()
-        return
 
     try:
         token = await get_or_fetch_token(telegram_id, username, first_name)
@@ -4810,34 +4806,14 @@ async def handle_steps_navigation_callback(callback: CallbackQuery, state: FSMCo
             return
 
         if data == "steps_back":
+            # Back = вернуться в меню "Работа по шагу" (а не перерисовывать тот же самый вопрос)
             await callback.answer()
-            step_info = await BACKEND_CLIENT.get_current_step_info(token)
-            if step_info:
-                step_number = step_info.get("step_number")
-                step_data = await get_current_step_question(telegram_id, username, first_name)
-                if step_data:
-                    response_text = step_data.get("message", "")
-                    if response_text:
-                        progress_indicator = format_step_progress_indicator(
-                            step_number=step_number,
-                            total_steps=step_info.get("total_steps", 12),
-                            step_title=step_info.get("step_title"),
-                            answered_questions=step_info.get("answered_questions", 0),
-                            total_questions=step_info.get("total_questions", 0)
-                        )
-                        full_text = f"{progress_indicator}\n\n❔{response_text}"
-                        await edit_long_message(
-                            callback,
-                            full_text,
-                            reply_markup=build_step_actions_markup()
-                        )
-                        await state.set_state(StepState.answering)
-                        return
             await edit_long_message(
                 callback,
                 "🪜 Работа по шагу",
                 reply_markup=build_steps_navigation_markup()
             )
+            await state.set_state(StepState.answering)
             return
 
         await callback.answer("Неизвестная команда")
