@@ -134,11 +134,13 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.message(Command(commands=["thanks"]))(handle_thanks)
     dp.message(Command(commands=["day", "inventory"]))(handle_day)
 
+    dp.message(F.text == "🪜 Шаги")(handle_steps)
     dp.message(F.text == "🪜 Работа по шагу")(handle_steps)
     dp.message(F.text == "📖 Самоанализ")(handle_day)
     dp.message(F.text == "📘 Чувства")(handle_feelings)
     dp.message(F.text == "🙏 Благодарности")(handle_thanks_menu)
     dp.message(F.text == "⚙️ Настройки")(handle_main_settings)
+    dp.message(F.text == "📎 Помощь")(handle_faq)
     dp.message(F.text == "📎 Инструкция")(handle_faq)
 
     register_onboarding_handlers(dp)
@@ -190,6 +192,7 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.callback_query(F.data.startswith("feeling_"))(handle_feeling_selection_callback)
 
     dp.callback_query(F.data.startswith("faq_"))(handle_faq_callback)
+    dp.callback_query(F.data == "nav_home")(handle_nav_home)
 
     dp.message(Command(commands=["qa_last"]))(qa_last)
     dp.message(Command(commands=["qa_ctx"]))(qa_ctx)
@@ -972,7 +975,7 @@ async def handle_sos_callback(callback: CallbackQuery, state: FSMContext) -> Non
                 "​",
                 reply_markup=None
             )
-            await callback.message.answer("​", reply_markup=build_main_menu_markup())
+            await callback.message.answer("🏠 Главное меню", reply_markup=build_main_menu_markup())
             await safe_answer_callback(callback)
             return
 
@@ -1175,7 +1178,7 @@ async def handle_sos_callback(callback: CallbackQuery, state: FSMContext) -> Non
                 "✅ Черновик сохранён.\n\nВернулся в главное меню.",
                 reply_markup=None
             )
-            await callback.message.answer("​", reply_markup=build_main_menu_markup())
+            await callback.message.answer("🏠 Главное меню", reply_markup=build_main_menu_markup())
             await safe_answer_callback(callback, "Черновик сохранён")
             return
 
@@ -1186,7 +1189,7 @@ async def handle_sos_callback(callback: CallbackQuery, state: FSMContext) -> Non
                 "✅ Помощь завершена.\n\nВернулся в главное меню.",
                 reply_markup=None
             )
-            await callback.message.answer("​", reply_markup=build_main_menu_markup())
+            await callback.message.answer("🏠 Главное меню", reply_markup=build_main_menu_markup())
             await safe_answer_callback(callback)
             return
 
@@ -1359,8 +1362,9 @@ async def handle_feelings_callback(callback: CallbackQuery, state: FSMContext) -
     data = callback.data
 
     if data == "feelings_back":
+        await state.clear()
         await callback.message.delete()
-        await callback.message.answer("​", reply_markup=build_main_menu_markup())
+        await callback.message.answer("🏠 Главное меню", reply_markup=build_main_menu_markup())
         await callback.answer()
         return
 
@@ -1430,8 +1434,9 @@ async def handle_faq_callback(callback: CallbackQuery, state: FSMContext) -> Non
     data = callback.data
 
     if data == "faq_back":
+        await state.clear()
         await callback.message.delete()
-        await callback.message.answer("​", reply_markup=build_main_menu_markup())
+        await callback.message.answer("🏠 Главное меню", reply_markup=build_main_menu_markup())
         await callback.answer()
         return
 
@@ -1473,6 +1478,17 @@ async def handle_main_settings(message: Message, state: FSMContext) -> None:
     await message.answer(settings_text, reply_markup=build_main_settings_markup())
 
 
+async def handle_nav_home(callback: CallbackQuery, state: FSMContext) -> None:
+    """Universal navigation handler: return to main menu from any inline screen."""
+    await state.clear()
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+    await callback.message.answer("🏠 Главное меню", reply_markup=build_main_menu_markup())
+    await callback.answer()
+
+
 async def handle_main_settings_callback(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle main settings callbacks"""
     data = callback.data
@@ -1481,14 +1497,9 @@ async def handle_main_settings_callback(callback: CallbackQuery, state: FSMConte
     first_name = callback.from_user.first_name
 
     if data == "main_settings_back":
-        try:
-            await callback.message.edit_text(
-                "​",
-                reply_markup=build_main_menu_markup()
-            )
-        except Exception:
-            await callback.message.delete()
-            await callback.message.answer("​", reply_markup=build_main_menu_markup())
+        await state.clear()
+        await callback.message.delete()
+        await callback.message.answer("🏠 Главное меню", reply_markup=build_main_menu_markup())
         await callback.answer()
         return
 
@@ -2297,8 +2308,9 @@ async def handle_thanks_callback(callback: CallbackQuery, state: FSMContext) -> 
     telegram_id = callback.from_user.id
 
     if data == "thanks_back":
+        await state.clear()
         await callback.message.delete()
-        await callback.message.answer("​", reply_markup=build_main_menu_markup())
+        await callback.message.answer("🏠 Главное меню", reply_markup=build_main_menu_markup())
         await callback.answer()
         return
 
@@ -4811,33 +4823,12 @@ async def handle_steps_navigation_callback(callback: CallbackQuery, state: FSMCo
 
         if data == "steps_back":
             await callback.answer()
-            step_info = await BACKEND_CLIENT.get_current_step_info(token)
-            if step_info:
-                step_number = step_info.get("step_number")
-                step_data = await get_current_step_question(telegram_id, username, first_name)
-                if step_data:
-                    response_text = step_data.get("message", "")
-                    if response_text:
-                        progress_indicator = format_step_progress_indicator(
-                            step_number=step_number,
-                            total_steps=step_info.get("total_steps", 12),
-                            step_title=step_info.get("step_title"),
-                            answered_questions=step_info.get("answered_questions", 0),
-                            total_questions=step_info.get("total_questions", 0)
-                        )
-                        full_text = f"{progress_indicator}\n\n❔{response_text}"
-                        await edit_long_message(
-                            callback,
-                            full_text,
-                            reply_markup=build_step_actions_markup()
-                        )
-                        await state.set_state(StepState.answering)
-                        return
             await edit_long_message(
                 callback,
                 "🪜 Работа по шагу",
                 reply_markup=build_steps_navigation_markup()
             )
+            await state.set_state(StepState.answer_mode)
             return
 
         await callback.answer("Неизвестная команда")

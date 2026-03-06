@@ -29,9 +29,9 @@ PROGRAM_EXPERIENCE_OPTIONS: List[str] = ["Новичок", "Есть немно�
 def build_main_menu_markup() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🪜 Работа по шагу"), KeyboardButton(text="📖 Самоанализ")],
+            [KeyboardButton(text="🪜 Шаги"), KeyboardButton(text="📖 Самоанализ")],
             [KeyboardButton(text="📘 Чувства"), KeyboardButton(text="🙏 Благодарности")],
-            [KeyboardButton(text="⚙️ Настройки"), KeyboardButton(text="📎 Инструкция")],
+            [KeyboardButton(text="⚙️ Настройки"), KeyboardButton(text="📎 Помощь")],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,
@@ -212,20 +212,27 @@ def build_sos_help_type_markup() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="💭 Не понял вопрос", callback_data="sos_help_question")],
         [InlineKeyboardButton(text="🔍 Хочу примеры", callback_data="sos_help_examples")],
         [InlineKeyboardButton(text="🪫 Просто тяжело", callback_data="sos_help_support")],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="sos_back")],
+        [
+            InlineKeyboardButton(text="◀️ Назад", callback_data="sos_back"),
+            InlineKeyboardButton(text="🏠 Домой", callback_data="nav_home")
+        ],
     ])
 
 def build_sos_save_draft_markup() -> InlineKeyboardMarkup:
     """Markup for saving SOS conversation as draft."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Да, сохранить", callback_data="sos_save_yes")],
-        [InlineKeyboardButton(text="❌ Нет", callback_data="sos_save_no")]
+        [InlineKeyboardButton(text="❌ Нет", callback_data="sos_save_no")],
+        [InlineKeyboardButton(text="🏠 Домой", callback_data="nav_home")]
     ])
 
 def build_sos_exit_markup() -> InlineKeyboardMarkup:
     """Markup for exiting SOS chat."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="sos_back")]
+        [
+            InlineKeyboardButton(text="◀️ Назад", callback_data="sos_back"),
+            InlineKeyboardButton(text="🏠 Домой", callback_data="nav_home")
+        ]
     ])
 
 
@@ -235,7 +242,8 @@ def build_steps_navigation_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔢 Выбрать другой шаг", callback_data="steps_select")],
         [InlineKeyboardButton(text="📋 Показать список вопросов", callback_data="steps_questions")],
-        [InlineKeyboardButton(text="▶️ Продолжить", callback_data="steps_continue")]
+        [InlineKeyboardButton(text="▶️ Продолжить", callback_data="steps_continue")],
+        [InlineKeyboardButton(text="🏠 Домой", callback_data="nav_home")]
     ])
 
 def build_steps_list_markup(steps: list[dict]) -> InlineKeyboardMarkup:
@@ -266,7 +274,10 @@ def build_steps_list_markup(steps: list[dict]) -> InlineKeyboardMarkup:
         if row:
             buttons.append(row)
 
-    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="steps_back")])
+    buttons.append([
+        InlineKeyboardButton(text="◀️ Назад", callback_data="steps_back"),
+        InlineKeyboardButton(text="🏠 Домой", callback_data="nav_home")
+    ])
     logger.info(f"Built steps list markup with {len(buttons)-1} rows of step buttons")
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -280,7 +291,10 @@ def build_step_questions_markup(questions: list[dict], step_id: int) -> InlineKe
             callback_data=f"question_view_{q['id']}"
         )])
 
-    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="steps_back")])
+    buttons.append([
+        InlineKeyboardButton(text="◀️ Назад", callback_data="steps_back"),
+        InlineKeyboardButton(text="🏠 Домой", callback_data="nav_home")
+    ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -498,7 +512,7 @@ def build_main_settings_markup() -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="🌐 Язык интерфейса", callback_data="main_settings_language")],
         [InlineKeyboardButton(text="🪪 Мой профиль", callback_data="main_settings_profile")],
         [InlineKeyboardButton(text="🔧 Настройки по шагу", callback_data="main_settings_steps")],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="main_settings_back")]
+        [InlineKeyboardButton(text="🏠 Домой", callback_data="nav_home")]
     ])
 
 
@@ -687,7 +701,10 @@ def build_thanks_menu_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="➕ Добавить запись", callback_data="thanks_add")],
         [InlineKeyboardButton(text="🗃️ История", callback_data="thanks_history")],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="thanks_back")]
+        [
+            InlineKeyboardButton(text="◀️ Назад", callback_data="thanks_back"),
+            InlineKeyboardButton(text="🏠 Домой", callback_data="nav_home")
+        ]
     ])
 
 
@@ -806,7 +823,10 @@ def build_all_feelings_markup() -> InlineKeyboardMarkup:
         buttons.append([InlineKeyboardButton(text=category, callback_data=f"feelings_cat_{category}")])
 
     buttons.append([InlineKeyboardButton(text="⚠️ СТРАХИ (список)", callback_data="feelings_fears")])
-    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="feelings_back")])
+    buttons.append([
+        InlineKeyboardButton(text="◀️ Назад", callback_data="feelings_back"),
+        InlineKeyboardButton(text="🏠 Домой", callback_data="nav_home")
+    ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -938,12 +958,16 @@ def build_faq_menu_markup() -> InlineKeyboardMarkup:
     for section_name in FAQ_SECTIONS.keys():
         buttons.append([InlineKeyboardButton(text=section_name, callback_data=f"faq_section_{section_name}")])
 
-    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="faq_back")])
+    buttons.append([
+        InlineKeyboardButton(text="◀️ Назад", callback_data="faq_back"),
+        InlineKeyboardButton(text="🏠 Домой", callback_data="nav_home")
+    ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 def build_faq_section_markup() -> InlineKeyboardMarkup:
     """Markup for returning to FAQ menu from a section."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="◀️ К разделам", callback_data="faq_menu")]
+        [InlineKeyboardButton(text="◀️ К разделам", callback_data="faq_menu")],
+        [InlineKeyboardButton(text="🏠 Домой", callback_data="nav_home")]
     ])
