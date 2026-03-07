@@ -104,6 +104,43 @@ def _build_profile_entry_detail_markup(entry_id: int, section_id: int, source: s
     back_cb = f"profile_history_settings_{section_id}" if source == "settings" else f"profile_history_{section_id}"
     return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="◀️", callback_data=back_cb)]])
 
+
+def _build_profile_survey_history_markup(section_id: int, entries: list[dict], page: int = 0, per_page: int = 5) -> InlineKeyboardMarkup:
+    buttons = []
+    start_idx = page * per_page
+    end_idx = min(start_idx + per_page, len(entries))
+
+    for i in range(start_idx, end_idx):
+        entry = entries[i]
+        entry_id = entry.get("id")
+        if not entry_id:
+            continue
+        preview = _entry_preview_text(entry.get("content", ""), limit=48) or "Запись"
+        buttons.append([
+            InlineKeyboardButton(
+                text=f"📝 {i + 1}. {preview}"[:64],
+                callback_data=f"profile_survey_entry_{entry_id}_{section_id}"
+            )
+        ])
+
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton(text="⬅️", callback_data=f"profile_survey_history_{section_id}_page_{page-1}"))
+    if end_idx < len(entries):
+        nav.append(InlineKeyboardButton(text="➡️", callback_data=f"profile_survey_history_{section_id}_page_{page+1}"))
+    if nav:
+        buttons.append(nav)
+
+    buttons.append([InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def _build_profile_survey_entry_markup(entry_id: int, section_id: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"profile_survey_edit_{entry_id}_{section_id}")],
+        [InlineKeyboardButton(text="◀️", callback_data=f"profile_survey_history_{section_id}")]
+    ])
+
 async def _render_profile_info_section(callback: CallbackQuery, token: str, section_id: int, source: str = "settings") -> None:
     section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
     section = section_data.get("section", {}) if section_data else {}
@@ -365,6 +402,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
             await callback.answer()
 
         elif data == "profile_back":
+            await state.clear()
             await callback.message.edit_text(
                 "🪪 Мой профиль\n\nВыбери раздел:",
                 reply_markup=build_profile_settings_markup()
@@ -373,8 +411,9 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
             return
 
         elif data == "profile_back_to_settings":
+            await state.clear()
             await callback.message.edit_text(
-                "🪪 Профиль\n\nВыбери раздел:",
+                "🪪 Мой профиль\n\nВыбери раздел:",
                 reply_markup=build_profile_settings_markup()
             )
             await callback.answer()
@@ -404,6 +443,58 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                 await callback.answer("Вопрос пропущен")
             else:
                 await callback.answer("Это был последний вопрос")
+
+        elif data.startswith("profile_survey_history_"):
+            payload = data.removeprefix("profile_survey_history_")
+            page = 0
+            if "_page_" in payload:
+                section_str, page_str = payload.split("_page_", 1)
+                section_id = int(section_str)
+                page = int(page_str)
+            else:
+                section_id = int(payload)
+
+            history_data = await BACKEND_CLIENT.get_section_history(token, section_id)
+            entries = history_data.get("entries", []) if history_data else []
+            section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
+            section_name = _clean_section_title(
+                section_data.get("section", {}).get("name", "Раздел"),
+                section_data.get("section", {}).get("icon", "")
+            )
+
+            await edit_long_message(
+                callback,
+                f"🗃️ История раздела\n\n{section_name}\n\n" + ("Выбери запись ниже." if entries else "История пока пуста."),
+                reply_markup=_build_profile_survey_history_markup(section_id, entries, page=page)
+            )
+            await callback.answer()
+            return
+
+        elif data.startswith("profile_history_settings_"):
+            payload = data.removeprefix("profile_history_settings_")
+            page = 0
+            if "_page_" in payload:
+                section_str, page_str = payload.split("_page_", 1)
+                section_id = int(section_str)
+                page = int(page_str)
+            else:
+                section_id = int(payload)
+
+            history_data = await BACKEND_CLIENT.get_section_history(token, section_id)
+            entries = history_data.get("entries", []) if history_data else []
+            section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
+            section_name = _clean_section_title(
+                section_data.get("section", {}).get("name", "Раздел"),
+                section_data.get("section", {}).get("icon", "")
+            )
+
+            await edit_long_message(
+                callback,
+                f"🗃️ История раздела\n\n{section_name}\n\n" + ("Выбери запись ниже." if entries else "История пока пуста."),
+                reply_markup=_build_profile_history_markup(section_id, entries, source="settings", page=page)
+            )
+            await callback.answer()
+            return
 
         elif data.startswith("profile_history_"):
             parts = data.split("_")
@@ -476,6 +567,121 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                     except Exception as e2:
                         logger.error(f"Failed to send new message for section {section_id} history: {e2}")
             await callback.answer()
+
+        elif data.startswith("profile_survey_entry_"):
+            payload = data.removeprefix("profile_survey_entry_")
+            entry_str, section_str = payload.split("_", 1)
+            entry_id = int(entry_str)
+            section_id = int(section_str)
+
+            history_data = await BACKEND_CLIENT.get_section_history(token, section_id)
+            entries = history_data.get("entries", []) if history_data else []
+            entry = next((item for item in entries if item.get("id") == entry_id), None)
+
+            if not entry:
+                await callback.answer("Запись не найдена")
+                return
+
+            content = entry.get("content", "")
+            subblock = entry.get("subblock_name")
+            created_at = entry.get("created_at", "")
+            date_str = ""
+            if created_at:
+                try:
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    date_str = dt.strftime("%d.%m.%Y %H:%M")
+                except Exception:
+                    pass
+
+            entry_text = "📝 Запись\n\n"
+            if subblock:
+                entry_text += f"📌 Подблок: {subblock}\n"
+            if date_str:
+                entry_text += f"📅 {date_str}\n"
+            entry_text += f"\n💬 Содержание:\n{content}"
+
+            await edit_long_message(
+                callback,
+                entry_text,
+                reply_markup=_build_profile_survey_entry_markup(entry_id, section_id)
+            )
+            await callback.answer()
+            return
+
+        elif data.startswith("profile_survey_edit_"):
+            payload = data.removeprefix("profile_survey_edit_")
+            entry_str, section_str = payload.split("_", 1)
+            entry_id = int(entry_str)
+            section_id = int(section_str)
+
+            history_data = await BACKEND_CLIENT.get_section_history(token, section_id)
+            entries = history_data.get("entries", []) if history_data else []
+            entry = next((item for item in entries if item.get("id") == entry_id), None)
+
+            if not entry:
+                await callback.answer("Запись не найдена")
+                return
+
+            await state.update_data(
+                editing_entry_id=entry_id,
+                editing_section_id=section_id,
+                editing_content=entry.get("content", ""),
+                editing_source="survey"
+            )
+            await state.set_state(ProfileStates.editing_entry)
+
+            await edit_long_message(
+                callback,
+                f"✏️ Редактирование записи\n\nТекущее содержание:\n{entry.get('content', '')}\n\nНапиши новое содержание:",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="◀️", callback_data=f"profile_survey_entry_{entry_id}_{section_id}")]
+                ])
+            )
+            await callback.answer()
+            return
+
+        elif data.startswith("profile_entry_settings_"):
+            payload = data.removeprefix("profile_entry_settings_")
+            entry_str, section_str = payload.split("_", 1)
+            entry_id = int(entry_str)
+            section_id = int(section_str)
+
+            history_data = await BACKEND_CLIENT.get_section_history(token, section_id)
+            entries = history_data.get("entries", []) if history_data else []
+            entry = next((item for item in entries if item.get("id") == entry_id), None)
+
+            if not entry:
+                await callback.answer("Запись не найдена")
+                return
+
+            content = entry.get("content", "")
+            subblock = entry.get("subblock_name")
+            created_at = entry.get("created_at", "")
+
+            date_str = ""
+            if created_at:
+                try:
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    date_str = dt.strftime("%d.%m.%Y %H:%M")
+                except Exception:
+                    pass
+
+            entry_text = "📝 Запись\n\n"
+            if subblock:
+                entry_text += f"📌 Подблок: {subblock}\n"
+            if date_str:
+                entry_text += f"📅 {date_str}\n"
+            entry_text += f"\n💬 Содержание:\n{content}"
+
+            await edit_long_message(
+                callback,
+                entry_text,
+                reply_markup=_build_profile_entry_detail_markup(entry_id, section_id, source="settings")
+            )
+            await callback.answer()
+            return
 
         elif data.startswith("profile_entry_"):
             entry_id = int(data.split("_")[-1])
@@ -569,7 +775,8 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
             await state.update_data(
                 editing_entry_id=entry_id,
                 editing_section_id=section_id,
-                editing_content=entry.get("content", "")
+                editing_content=entry.get("content", ""),
+                editing_source="profile"
             )
             await state.set_state(ProfileStates.editing_entry)
 
@@ -640,6 +847,28 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
         elif data.startswith("profile_info_section_"):
             section_id = int(data.split("_")[-1])
             await _render_profile_info_section(callback, token, section_id, source="profile")
+            await callback.answer()
+            return
+
+        elif data.startswith("profile_add_entry_settings_"):
+            section_id = int(data.removeprefix("profile_add_entry_settings_"))
+
+            await state.update_data(adding_section_id=section_id, adding_source="settings")
+            await state.set_state(ProfileStates.adding_entry)
+
+            section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
+            section_name = _clean_section_title(
+                section_data.get("section", {}).get("name", "Раздел"),
+                section_data.get("section", {}).get("icon", "")
+            )
+
+            await edit_long_message(
+                callback,
+                f"➕ Добавить запись\n\n{section_name}\n\nНапиши содержание записи:",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="◀️", callback_data=f"profile_info_settings_section_{section_id}")]
+                ])
+            )
             await callback.answer()
             return
 
@@ -721,7 +950,7 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                         await message.answer(
                             "✅ Мини-опрос завершён!\n\n"
                             "Спасибо за ответы.",
-                            reply_markup=build_about_me_main_markup()
+                            reply_markup=build_profile_settings_markup()
                         )
                         return
                     next_section_id = next_question_data["section_id"]
@@ -757,8 +986,7 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
                 survey_markup = build_mini_survey_markup(next_question_id if next_question_id else -1, can_skip=is_optional)
                 section_actions = [
-                    [InlineKeyboardButton(text="🗃️ История раздела", callback_data=f"profile_history_{next_section_id}")],
-                    [InlineKeyboardButton(text="➕ Добавить в раздел", callback_data=f"profile_add_entry_{next_section_id}")]
+                    [InlineKeyboardButton(text="🗃️ История", callback_data=f"profile_survey_history_{next_section_id}")]
                 ]
                 combined_buttons = survey_markup.inline_keyboard + section_actions
                 combined_markup = InlineKeyboardMarkup(inline_keyboard=combined_buttons)
@@ -801,8 +1029,7 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                     from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
                     survey_markup = build_mini_survey_markup(next_question.get("id"), can_skip=is_optional)
                     section_actions = [
-                        [InlineKeyboardButton(text="🗃️ История раздела", callback_data=f"profile_history_{section_id}")],
-                        [InlineKeyboardButton(text="➕ Добавить в раздел", callback_data=f"profile_add_entry_{section_id}")]
+                        [InlineKeyboardButton(text="🗃️ История", callback_data=f"profile_survey_history_{next_section_id}")]
                     ]
                     combined_buttons = survey_markup.inline_keyboard + section_actions
                     combined_markup = InlineKeyboardMarkup(inline_keyboard=combined_buttons)
@@ -820,7 +1047,7 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                     await message.answer(
                         "✅ Мини-опрос завершён!\n\n"
                         "Спасибо за ответы.",
-                        reply_markup=build_about_me_main_markup()
+                        reply_markup=build_profile_settings_markup()
                     )
         else:
             section_id = state_data.get("section_id")
@@ -1021,11 +1248,19 @@ async def handle_profile_edit_entry(message: Message, state: FSMContext) -> None
         )
 
         if result.get("status") == "success":
+            source = state_data.get("editing_source", "profile")
+            if source == "survey":
+                view_cb = f"profile_survey_entry_{entry_id}_{section_id}"
+                history_cb = f"profile_survey_history_{section_id}"
+            else:
+                view_cb = f"profile_entry_{entry_id}"
+                history_cb = f"profile_history_{section_id}"
+
             await message.answer(
                 "✅ Запись обновлена!",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="📝 Посмотреть запись", callback_data=f"profile_entry_{entry_id}")],
-                    [InlineKeyboardButton(text="🗃️ История", callback_data=f"profile_history_{section_id}")]
+                    [InlineKeyboardButton(text="📝 Посмотреть запись", callback_data=view_cb)],
+                    [InlineKeyboardButton(text="🗃️ История", callback_data=history_cb)]
                 ])
             )
         else:
