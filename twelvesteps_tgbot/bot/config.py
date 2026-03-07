@@ -591,16 +591,13 @@ def build_mini_survey_markup(
 ) -> InlineKeyboardMarkup:
     """Markup for mini survey.
 
-    В мини-опросе оставляем только историю ответов и кнопку назад.
+    Для mini-опроса в продовом MVP оставляем только пропуск и кнопку назад.
+    Историю убираем, чтобы не смешивать ответы mini-опроса с историей разделов профиля.
     """
     buttons = []
     if can_skip:
         buttons.append([InlineKeyboardButton(text="🔁 Пропустить", callback_data="about_survey_skip")])
-    row = []
-    if history_callback:
-        row.append(InlineKeyboardButton(text="🗃️ История", callback_data=history_callback))
-    row.append(InlineKeyboardButton(text="◀️ Назад", callback_data=back_callback))
-    buttons.append(row)
+    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data=back_callback)])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
