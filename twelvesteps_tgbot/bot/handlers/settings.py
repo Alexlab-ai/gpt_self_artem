@@ -205,6 +205,7 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
 
     try:
         if data == "profile_settings_back":
+            await state.clear()
             await callback.message.edit_text(
                 "⚙️ Настройки\n\nВыбери раздел настроек:",
                 reply_markup=build_main_settings_markup()
