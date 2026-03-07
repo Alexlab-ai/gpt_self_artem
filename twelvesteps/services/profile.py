@@ -204,24 +204,14 @@ class ProfileService:
                    f"Has last_answer: {last_answer is not None}")
 
         if not unanswered and last_answer:
-            section_data = await self.repo.get_section_data(user_id, section_id)
-            generated_count = 0
-            if section_data and section_data.content:
-                content = section_data.content
-                generated_count = content.count("[Сгенерированный вопрос]")
-
-            MAX_FOLLOW_UP_QUESTIONS = 1
-            if generated_count >= MAX_FOLLOW_UP_QUESTIONS:
-                return None
-
-            try:
-                follow_up_question = await self._generate_follow_up_question(
-                    user_id, section, last_answer
-                )
-                return follow_up_question
-            except Exception as e:
-                print(f"[ProfileService] Error generating follow-up question: {e}")
-                return None
+            # MVP / prod-safe mode:
+            # while the user is passing the fixed base questionnaire,
+            # we do NOT generate GPT follow-up questions inside a section.
+            # This keeps the survey predictable: 52 base questions only.
+            #
+            # The dynamic deepening mode should be implemented later as a
+            # separate phase AFTER all base questions are completed.
+            return None
 
         if not unanswered:
             return None
