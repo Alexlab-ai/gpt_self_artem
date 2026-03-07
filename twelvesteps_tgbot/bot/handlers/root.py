@@ -171,6 +171,11 @@ async def qa_trace(message: Message) -> None:
     logs = USER_LOGS.get(uid, [])
     await message.answer(str(logs[-1].blocks_used) if logs else "Empty")
 
+async def qa_last(message: Message) -> None:
+    uid = message.from_user.id
+    logs = USER_LOGS.get(uid, [])
+    await message.answer(str(logs[-1].classification_result) if logs else "Empty")
+
 def get_logs_for_period(uid: int, hours: int):
     logs = USER_LOGS.get(uid, [])
     now_ts = int(datetime.datetime.utcnow().timestamp())
