@@ -1,4 +1,36 @@
 from .shared import *
+
+
+async def _mini_survey_header(token: str) -> str:
+    """Build header with progress for fixed mini-survey questions."""
+    try:
+        sections_data = await BACKEND_CLIENT.get_profile_sections(token)
+        sections = sections_data.get("sections", []) if sections_data else []
+        total_questions = 0
+        answered_question_ids: set[int] = set()
+        for section in sections:
+            section_id = section.get("id")
+            if not section_id:
+                continue
+            detail = await BACKEND_CLIENT.get_section_detail(token, section_id)
+            section_info = detail.get("section", {}) if detail else {}
+            questions = section_info.get("questions", []) or []
+            total_questions += len(questions)
+            try:
+                answers_data = await BACKEND_CLIENT.get_user_answers_for_section(token, section_id)
+                for answer in (answers_data.get("answers", []) if answers_data else []):
+                    qid = answer.get("question_id")
+                    if qid:
+                        answered_question_ids.add(qid)
+            except Exception:
+                pass
+        if total_questions > 0:
+            current = min(len(answered_question_ids) + 1, total_questions)
+            return f"👣 Пройти мини-опрос\n\n📋 Вопрос {current} из {total_questions}"
+    except Exception:
+        pass
+    return "👣 Пройти мини-опрос"
+
 from .shared import _clean_section_title, _entry_preview_text, _section_nav_callback, _section_back_callback
 
 async def _render_profile_info_menu(callback: CallbackQuery, token: str, source: str = "settings") -> None:
@@ -992,19 +1024,21 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                 )
 
                 if section_info:
+                    header = await _mini_survey_header(token)
                     await send_long_message(
                         message,
                         f"✅ Ответ сохранён!\n\n"
-                        f"👣 Пройти мини-опрос\n\n"
+                        f"{header}\n\n"
                         f"📋 {section_info.get('name', 'Следующий раздел')}\n\n"
                         f"❓ {question_text}",
                         reply_markup=combined_markup
                     )
                 else:
+                    header = await _mini_survey_header(token)
                     await send_long_message(
                         message,
                         f"✅ Ответ сохранён!\n\n"
-                        f"👣 Пройти мини-опрос\n\n"
+                        f"{header}\n\n"
                         f"❓ {question_text}",
                         reply_markup=combined_markup
                     )
@@ -1032,10 +1066,11 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                         history_callback=f"profile_survey_history_{next_section_id}"
                     )
 
+                    header = await _mini_survey_header(token)
                     await send_long_message(
                         message,
                         f"✅ Раздел завершён!\n\n"
-                        f"👣 Пройти мини-опрос\n\n"
+                        f"{header}\n\n"
                         f"📋 {section_info.get('name', 'Следующий раздел')}\n\n"
                         f"❓ {question_text}",
                         reply_markup=combined_markup
