@@ -29,13 +29,32 @@ PROGRAM_EXPERIENCE_OPTIONS: List[str] = ["Новичок", "Есть немно�
 def build_main_menu_markup() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="🪜 Работа по шагу"), KeyboardButton(text="📖 Самоанализ")],
-            [KeyboardButton(text="📘 Чувства"), KeyboardButton(text="🙏 Благодарности")],
-            [KeyboardButton(text="⚙️ Настройки"), KeyboardButton(text="📎 Инструкция")],
+            [
+                KeyboardButton(text="📋 Меню"),
+                KeyboardButton(text="💎 Тарифы"),
+                KeyboardButton(text="❓ Помощь"),
+            ],
         ],
         resize_keyboard=True,
         one_time_keyboard=False,
     )
+
+
+def build_root_menu_markup() -> InlineKeyboardMarkup:
+    """Primary app navigation opened from the compact main keyboard."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🪜 Работа по шагу", callback_data="root_steps"), InlineKeyboardButton(text="📖 Самоанализ", callback_data="root_day")],
+        [InlineKeyboardButton(text="📘 Чувства", callback_data="root_feelings"), InlineKeyboardButton(text="🙏 Благодарности", callback_data="root_thanks")],
+        [InlineKeyboardButton(text="⚙️ Настройки", callback_data="root_settings"), InlineKeyboardButton(text="🪪 Профиль", callback_data="root_profile")],
+        [InlineKeyboardButton(text="✖️ Закрыть", callback_data="root_close")],
+    ])
+
+
+def build_tariffs_menu_markup() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📋 Открыть меню", callback_data="root_menu")],
+        [InlineKeyboardButton(text="❓ Помощь", callback_data="root_help")],
+    ])
 
 
 def build_experience_markup() -> ReplyKeyboardMarkup:
@@ -114,18 +133,18 @@ def build_profile_sections_markup(sections: List[Dict[str, Any]]) -> InlineKeybo
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def build_profile_actions_markup(section_id: int, back_callback: str = "profile_back") -> InlineKeyboardMarkup:
+def build_profile_actions_markup(section_id: int) -> InlineKeyboardMarkup:
     """Build action buttons for a profile section."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="🗃️ История", callback_data=f"profile_history_{section_id}"),
             InlineKeyboardButton(text="➕ Добавить", callback_data=f"profile_add_entry_{section_id}")
         ],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data=back_callback)]
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_back")]
     ])
 
 
-def build_section_history_markup(section_id: int, entries: List[Dict[str, Any]], page: int = 0, per_page: int = 5, back_callback: Optional[str] = None) -> InlineKeyboardMarkup:
+def build_section_history_markup(section_id: int, entries: List[Dict[str, Any]], page: int = 0, per_page: int = 5) -> InlineKeyboardMarkup:
     """Build markup for section history with pagination and edit buttons."""
     buttons = []
 
@@ -164,20 +183,20 @@ def build_section_history_markup(section_id: int, entries: List[Dict[str, Any]],
 
     buttons.append([
         InlineKeyboardButton(text="➕ Добавить запись", callback_data=f"profile_add_entry_{section_id}"),
-        InlineKeyboardButton(text="⏪ Назад", callback_data=back_callback or f"profile_section_{section_id}")
+        InlineKeyboardButton(text="◀️", callback_data=f"profile_info_section_{section_id}")
     ])
 
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
-def build_entry_detail_markup(entry_id: int, section_id: int, back_callback: Optional[str] = None) -> InlineKeyboardMarkup:
+def build_entry_detail_markup(entry_id: int, section_id: int) -> InlineKeyboardMarkup:
     """Build markup for entry detail view with edit/delete options."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"profile_edit_{entry_id}"),
             InlineKeyboardButton(text="🗑 Удалить", callback_data=f"profile_delete_{entry_id}")
         ],
-        [InlineKeyboardButton(text="⏪ Назад к истории", callback_data=back_callback or f"profile_history_{section_id}")]
+        [InlineKeyboardButton(text="◀️", callback_data=f"profile_history_{section_id}")]
     ])
 
 
@@ -185,7 +204,7 @@ def build_entry_edit_markup(entry_id: int, section_id: int) -> InlineKeyboardMar
     """Build markup for entry editing."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Сохранить", callback_data=f"profile_save_edit_{entry_id}")],
-        [InlineKeyboardButton(text="❌ Отмена", callback_data=f"profile_entry_{entry_id}")]
+        [InlineKeyboardButton(text="◀️", callback_data=f"profile_entry_{entry_id}")]
     ])
 
 
@@ -235,7 +254,8 @@ def build_steps_navigation_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🔢 Выбрать другой шаг", callback_data="steps_select")],
         [InlineKeyboardButton(text="📋 Показать список вопросов", callback_data="steps_questions")],
-        [InlineKeyboardButton(text="▶️ Продолжить", callback_data="steps_continue")]
+        [InlineKeyboardButton(text="▶️ Продолжить", callback_data="steps_continue")],
+        [InlineKeyboardButton(text="◀️", callback_data="steps_to_main")],
     ])
 
 def build_steps_list_markup(steps: list[dict]) -> InlineKeyboardMarkup:
@@ -527,7 +547,7 @@ def build_profile_settings_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="🪪 Расскажи о себе", callback_data="profile_settings_about")],
         [InlineKeyboardButton(text="📋 Информация обо мне", callback_data="profile_settings_info")],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_main_back")]
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_back_to_settings")]
     ])
 
 
@@ -710,10 +730,9 @@ def build_thanks_input_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="💾 Сохранить", callback_data="thanks_save"),
-            InlineKeyboardButton(text="❌ Отмена", callback_data="thanks_cancel")
+            InlineKeyboardButton(text="◀️ Назад", callback_data="thanks_menu")
         ]
     ])
-    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
 
