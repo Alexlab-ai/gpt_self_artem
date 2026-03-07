@@ -402,7 +402,13 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                 )
                 await callback.answer("Вопрос пропущен")
             else:
-                await callback.answer("Это был последний вопрос")
+                await state.clear()
+                await edit_long_message(
+                    callback,
+                    "✅ Мини-опрос завершён!\n\nСпасибо за ответы.",
+                    reply_markup=build_profile_settings_markup()
+                )
+                await callback.answer("Опрос завершён")
 
         elif data.startswith("profile_history_"):
             parts = data.split("_")
@@ -639,6 +645,20 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
         elif data.startswith("profile_info_section_"):
             section_id = int(data.split("_")[-1])
             await _render_profile_info_section(callback, token, section_id, source="profile")
+            await callback.answer()
+            return
+
+        elif data.startswith("profile_add_entry_settings_"):
+            section_id = int(data.split("_")[-1])
+            await state.update_data(adding_section_id=section_id, adding_source="settings")
+            await state.set_state(ProfileStates.adding_entry)
+            section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
+            section_name = _clean_section_title(section_data.get("section", {}).get("name", "Раздел"), section_data.get("section", {}).get("icon", ""))
+            await edit_long_message(
+                callback,
+                f"➕ Добавить запись\n\n{section_name}\n\nНапиши содержание записи:",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="◀️", callback_data=f"profile_info_settings_section_{section_id}")]])
+            )
             await callback.answer()
             return
 
