@@ -543,11 +543,11 @@ def build_step_settings_markup() -> InlineKeyboardMarkup:
 
 
 def build_profile_settings_markup() -> InlineKeyboardMarkup:
-    """Profile settings menu."""
+    """Profile settings menu (simplified)."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="📋 Информация обо мне", callback_data="profile_settings_info")],
         [InlineKeyboardButton(text="👣 Пройти мини-опрос", callback_data="profile_settings_survey")],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_back_to_settings")]
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_back")]
     ])
 
 
@@ -588,10 +588,8 @@ def build_mini_survey_markup(question_id: Optional[int] = None, can_skip: bool =
     buttons = []
     if can_skip:
         buttons.append([InlineKeyboardButton(text="🔁 Пропустить", callback_data="about_survey_skip")])
-    buttons.append([
-        InlineKeyboardButton(text="⏸ Пауза", callback_data="about_survey_pause")
-    ])
-    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="about_back")])
+    buttons.append([InlineKeyboardButton(text="⏸ Пауза", callback_data="about_survey_pause")])
+    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_back")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
