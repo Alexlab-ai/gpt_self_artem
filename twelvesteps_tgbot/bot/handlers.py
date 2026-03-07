@@ -135,6 +135,129 @@ def _clean_section_title(name: str, icon: str = "") -> str:
     return f"{cleaned_icon} {cleaned_name}".strip() if cleaned_icon else (cleaned_name or raw_name or "Раздел")
 
 
+def _entry_preview_text(content: str, limit: int = 42) -> str:
+    content = (content or "").replace("\n", " ").strip()
+    if len(content) <= limit:
+        return content
+    return content[: limit - 1].rstrip() + "…"
+
+
+def _section_nav_callback(section_id: int, source: str) -> str:
+    return f"profile_info_settings_section_{section_id}" if source == "settings" else f"profile_info_section_{section_id}"
+
+
+def _section_back_callback(source: str) -> str:
+    return "profile_back_to_settings" if source == "settings" else "profile_my_info"
+
+
+async def _render_profile_info_menu(callback: CallbackQuery, token: str, source: str = "settings") -> None:
+    sections_data = await BACKEND_CLIENT.get_profile_sections(token)
+    sections = sections_data.get("sections", []) if sections_data else []
+
+    if not sections:
+        await edit_long_message(
+            callback,
+            "📋 Информация обо мне\n\nРазделы пока недоступны.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="◀️", callback_data=_section_back_callback(source))]
+            ])
+        )
+        return
+
+    buttons = []
+    for section in sections:
+        section_id = section.get("id")
+        if not section_id or section_id == 14:
+            continue
+
+        name = section.get("name", "Раздел")
+        icon = section.get("icon", "")
+        title = _clean_section_title(name, icon)
+        buttons.append([
+            InlineKeyboardButton(
+                text=title[:64],
+                callback_data=_section_nav_callback(section_id, source)
+            )
+        ])
+
+    buttons.append([InlineKeyboardButton(text="◀️", callback_data=_section_back_callback(source))])
+
+    text = (
+        "📋 Информация обо мне\n\n"
+        "Выбери раздел.\n"
+        "Внутри раздела сразу будут видны последние записи и действия."
+    )
+    await edit_long_message(
+        callback,
+        text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+    )
+
+
+async def _render_profile_info_section(callback: CallbackQuery, token: str, section_id: int, source: str = "settings") -> None:
+    section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
+    section = section_data.get("section", {}) if section_data else {}
+    if not section:
+        await edit_long_message(
+            callback,
+            "❌ Раздел не найден.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="◀️", callback_data=_section_back_callback(source))]
+            ])
+        )
+        return
+
+    name = section.get("name", "Раздел")
+    icon = section.get("icon", "")
+    title = _clean_section_title(name, icon)
+
+    history_data = await BACKEND_CLIENT.get_section_history(token, section_id)
+    entries = history_data.get("entries", []) if history_data else []
+    entries = entries[:5]
+
+    buttons = [
+        [
+            InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"profile_add_entry_{section_id}"),
+            InlineKeyboardButton(text="➕ Добавить", callback_data=f"profile_add_entry_{section_id}")
+        ],
+        [InlineKeyboardButton(text="🗃️ История", callback_data=f"profile_history_{section_id}")],
+    ]
+
+    if entries:
+        for idx, entry in enumerate(entries, 1):
+            entry_id = entry.get("id")
+            if not entry_id:
+                continue
+            subblock = (entry.get("subblock_name") or "").strip()
+            preview = _entry_preview_text(entry.get("content", ""))
+            if subblock:
+                button_text = f"📝 {idx}. {subblock}: {preview}"
+            else:
+                button_text = f"📝 {idx}. {preview or 'Запись'}"
+            buttons.append([
+                InlineKeyboardButton(text=button_text[:64], callback_data=f"profile_entry_{entry_id}")
+            ])
+
+    buttons.append([InlineKeyboardButton(text="◀️", callback_data=_section_back_callback(source))])
+
+    text = f"{title}\n\n"
+    if entries:
+        text += "📝 Последние записи:\n\n"
+        for entry in entries[:3]:
+            preview = _entry_preview_text(entry.get("content", ""), limit=80)
+            if preview:
+                text += f"• {preview}\n"
+        text += "\nНажми на запись ниже, чтобы открыть детали."
+    else:
+        text += "Пока не заполнено.\n\nДобавь первую запись или открой историю."
+
+    await edit_long_message(
+        callback,
+        text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+    )
+
+
 async def show_main_menu(message_or_callback_message) -> None:
     await message_or_callback_message.answer(MAIN_MENU_TEXT, reply_markup=build_main_menu_markup())
 
