@@ -47,7 +47,7 @@ async def _start_mini_survey(callback: CallbackQuery, state: FSMContext) -> None
     await edit_long_message(
         callback,
         f"👣 Пройти мини-опрос\n\n❓ {question_text}",
-        reply_markup=build_mini_survey_markup(first_question.get("id"), can_skip=is_optional)
+        reply_markup=build_mini_survey_markup(first_question.get("id"), can_skip=is_optional, history_callback=f"profile_survey_history_{section_id}")
     )
 
 
@@ -224,7 +224,7 @@ async def handle_about_callback(callback: CallbackQuery, state: FSMContext) -> N
                 await edit_long_message(
                     callback,
                     f"👣 Пройти мини-опрос\n\n❓ {question_text}",
-                    reply_markup=build_mini_survey_markup(next_question_id if next_question_id else -1, can_skip=is_optional)
+                    reply_markup=build_mini_survey_markup(next_question_id if next_question_id else -1, can_skip=is_optional, history_callback=f"profile_survey_history_{current_section_id}")
                 )
                 return
 
@@ -240,7 +240,7 @@ async def handle_about_callback(callback: CallbackQuery, state: FSMContext) -> N
                 await edit_long_message(
                     callback,
                     f"👣 Пройти мини-опрос\n\n❓ {next_question.get('question_text', '')}",
-                    reply_markup=build_mini_survey_markup(next_question.get("id"), can_skip=next_question.get("is_optional", False))
+                    reply_markup=build_mini_survey_markup(next_question.get("id"), can_skip=next_question.get("is_optional", False), history_callback=f"profile_survey_history_{section_id}")
                 )
                 return
 
