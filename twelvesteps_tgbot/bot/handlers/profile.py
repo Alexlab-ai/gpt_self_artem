@@ -1,4 +1,5 @@
 from .shared import *
+from .shared import _clean_section_title, _entry_preview_text, _section_nav_callback, _section_back_callback
 
 async def _render_profile_info_menu(callback: CallbackQuery, token: str, source: str = "settings") -> None:
     sections_data = await BACKEND_CLIENT.get_profile_sections(token)
