@@ -1,5 +1,5 @@
-"""Compatibility wrapper. Main registration now lives in bot.handlers_modules."""
+"""Compatibility wrapper. Main registration lives in bot.handlers package."""
 
-from bot.handlers_modules import register_handlers
+from bot.handlers import register_handlers
 
 __all__ = ["register_handlers"]
