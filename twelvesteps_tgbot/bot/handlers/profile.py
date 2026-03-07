@@ -31,6 +31,7 @@ async def _render_profile_info_menu(callback: CallbackQuery, token: str, source:
             )
         ])
 
+    buttons.append([InlineKeyboardButton(text="➕ Добавить раздел", callback_data="profile_custom_section")])
     buttons.append([InlineKeyboardButton(text="◀️", callback_data=_section_back_callback(source))])
 
     text = (
@@ -106,7 +107,6 @@ def _build_profile_entry_detail_markup(entry_id: int, section_id: int, source: s
 
 
 def _build_profile_survey_history_markup(section_id: int, entries: list[dict], page: int = 0, per_page: int = 5) -> InlineKeyboardMarkup:
-    """History inside mini survey: only answers + edit, without adding records."""
     buttons = []
     start_idx = page * per_page
     end_idx = min(start_idx + per_page, len(entries))
@@ -132,7 +132,7 @@ def _build_profile_survey_history_markup(section_id: int, entries: list[dict], p
     if nav:
         buttons.append(nav)
 
-    buttons.append([InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")])
+    buttons.append([InlineKeyboardButton(text="◀️", callback_data="profile_settings_survey")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -984,13 +984,11 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                         survey_is_generated=False
                     )
 
-                from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-                survey_markup = build_mini_survey_markup(next_question_id if next_question_id else -1, can_skip=is_optional)
-                section_actions = [
-                    [InlineKeyboardButton(text="🗃️ История", callback_data=f"profile_survey_history_{next_section_id}")]
-                ]
-                combined_buttons = survey_markup.inline_keyboard + section_actions
-                combined_markup = InlineKeyboardMarkup(inline_keyboard=combined_buttons)
+                combined_markup = build_mini_survey_markup(
+                    next_question_id if next_question_id else -1,
+                    can_skip=is_optional,
+                    history_callback=f"profile_survey_history_{next_section_id}"
+                )
 
                 if section_info:
                     await send_long_message(
@@ -1027,13 +1025,11 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                         survey_is_generated=False
                     )
 
-                    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-                    survey_markup = build_mini_survey_markup(next_question.get("id"), can_skip=is_optional)
-                    section_actions = [
-                        [InlineKeyboardButton(text="🗃️ История", callback_data=f"profile_survey_history_{next_section_id}")]
-                    ]
-                    combined_buttons = survey_markup.inline_keyboard + section_actions
-                    combined_markup = InlineKeyboardMarkup(inline_keyboard=combined_buttons)
+                    combined_markup = build_mini_survey_markup(
+                        next_question.get("id"),
+                        can_skip=is_optional,
+                        history_callback=f"profile_survey_history_{next_section_id}"
+                    )
 
                     await send_long_message(
                         message,
