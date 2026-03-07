@@ -32,6 +32,7 @@ async def _mini_survey_header(token: str) -> str:
     return "👣 Пройти мини-опрос"
 
 from .shared import _clean_section_title, _entry_preview_text, _section_nav_callback, _section_back_callback
+from .about_me import find_first_unanswered_question
 
 async def _render_profile_info_menu(callback: CallbackQuery, token: str, source: str = "settings") -> None:
     sections_data = await BACKEND_CLIENT.get_profile_sections(token)
