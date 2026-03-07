@@ -1,39 +1,6 @@
 from .shared import *
-
-
-async def _render_profile_info_menu_from_settings(callback: CallbackQuery, token: str) -> None:
-    """Render profile info menu opened from Settings without depending on profile module imports."""
-    sections_data = await BACKEND_CLIENT.get_profile_sections(token)
-    sections = sections_data.get("sections", []) if sections_data else []
-
-    if not sections:
-        await edit_long_message(
-            callback,
-            "📋 Информация обо мне\n\nРазделы пока недоступны.",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")]
-            ])
-        )
-        return
-
-    buttons = []
-    for section in sections:
-        section_id = section.get("id")
-        if not section_id or section_id == 14:
-            continue
-        title = _clean_section_title(section.get("name", "Раздел"), section.get("icon", ""))
-        buttons.append([
-            InlineKeyboardButton(text=title[:64], callback_data=f"profile_info_settings_section_{section_id}")
-        ])
-
-    buttons.append([InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")])
-
-    await edit_long_message(
-        callback,
-        "📋 Информация обо мне\n\nВыбери раздел.",
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
-    )
-
+from .profile import _render_profile_info_menu, _render_profile_info_section
+from .about_me import find_first_unanswered_question
 
 async def handle_main_settings(message: Message, state: FSMContext) -> None:
     """Handle main settings button - show settings menu"""
@@ -42,7 +9,6 @@ async def handle_main_settings(message: Message, state: FSMContext) -> None:
         "Выбери раздел настроек:"
     )
     await message.answer(settings_text, reply_markup=build_main_settings_markup())
-
 
 async def handle_main_settings_callback(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle main settings callbacks"""
@@ -108,7 +74,6 @@ async def handle_main_settings_callback(callback: CallbackQuery, state: FSMConte
 
     await callback.answer()
 
-
 async def handle_language_callback(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle language selection"""
     data = callback.data
@@ -133,7 +98,6 @@ async def handle_language_callback(callback: CallbackQuery, state: FSMContext) -
         return
 
     await callback.answer()
-
 
 async def handle_step_settings_callback(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle step-specific settings callbacks"""
@@ -209,6 +173,7 @@ async def handle_step_settings_callback(callback: CallbackQuery, state: FSMConte
         await callback.answer()
         return
 
+
     if data.startswith("step_settings_question_"):
         try:
             question_id = int(data.split("_")[-1])
@@ -231,7 +196,6 @@ async def handle_step_settings_callback(callback: CallbackQuery, state: FSMConte
 
     await callback.answer()
 
-
 async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle profile settings callbacks."""
     data = callback.data
@@ -240,7 +204,7 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
     first_name = callback.from_user.first_name
 
     try:
-        if data == "profile_settings_back":
+        if data in {"profile_back_to_settings", "profile_settings_back"}:
             await callback.message.edit_text(
                 "⚙️ Настройки\n\nВыбери раздел настроек:",
                 reply_markup=build_main_settings_markup()
@@ -248,51 +212,109 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
             await callback.answer()
             return
 
+        if data == "profile_settings_info":
+            await callback.answer("Загружаю информацию...")
+            try:
+                token = await get_or_fetch_token(telegram_id, username, first_name)
+                if not token:
+                    await callback.message.edit_text(
+                        "❌ Ошибка авторизации. Нажми /start.",
+                        reply_markup=build_profile_settings_markup()
+                    )
+                    return
+                await _render_profile_info_menu(callback, token, source="settings")
+            except Exception as e:
+                logger.exception("Error loading profile info: %s", e)
+                await callback.message.edit_text(
+                    f"❌ Ошибка загрузки информации.\n\n{str(e)[:140]}",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")]])
+                )
+            return
+
+        if data.startswith("profile_info_settings_section_"):
+            await callback.answer("Загружаю раздел...")
+            try:
+                section_id = int(data.replace("profile_info_settings_section_", ""))
+                token = await get_or_fetch_token(telegram_id, username, first_name)
+                if not token:
+                    await callback.message.edit_text(
+                        "❌ Ошибка авторизации. Нажми /start.",
+                        reply_markup=build_profile_settings_markup()
+                    )
+                    return
+                await _render_profile_info_section(callback, token, section_id, source="settings")
+            except Exception as e:
+                logger.exception("Error viewing settings profile section: %s", e)
+                await callback.message.edit_text(
+                    f"❌ Ошибка загрузки раздела.\n\n{str(e)[:140]}",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="◀️", callback_data="profile_settings_info")]])
+                )
+            return
+
+        if data == "profile_settings_survey":
+            await callback.answer("Загружаю вопросы...")
+            try:
+                token = await get_or_fetch_token(telegram_id, username, first_name)
+                if not token:
+                    await callback.message.edit_text(
+                        "❌ Ошибка авторизации. Нажми /start.",
+                        reply_markup=build_profile_settings_markup()
+                    )
+                    return
+                first_question_data = await find_first_unanswered_question(token)
+                if not first_question_data:
+                    await callback.message.edit_text(
+                        "✅ Мини-опрос уже пройден!\n\nВсе вопросы отвечены.",
+                        reply_markup=build_profile_settings_markup()
+                    )
+                    return
+                section_id = first_question_data["section_id"]
+                first_question = first_question_data["question"]
+                section_info = first_question_data["section_info"]
+                await state.update_data(
+                    current_section_id=section_id,
+                    current_question=first_question,
+                    section_name=section_info.get("name", "Раздел")
+                )
+                await state.set_state(ProfileStates.answering_question)
+                question_text = first_question.get("question_text") or first_question.get("text") or "Вопрос"
+                survey_text = (
+                    "👣 Пройти мини-опрос\n\n"
+                    f"Раздел: {section_info.get('name', 'Раздел')}\n\n"
+                    f"{question_text}"
+                )
+                await callback.message.edit_text(
+                    survey_text,
+                    reply_markup=build_profile_skip_markup()
+                )
+            except Exception as e:
+                logger.exception("Error starting mini survey from profile settings: %s", e)
+                await callback.message.edit_text(
+                    f"❌ Ошибка загрузки мини-опроса.\n\n{str(e)[:140]}",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")]])
+                )
+            return
+
         if data == "profile_settings_about":
             await callback.message.edit_text(
-                "🪪 Расскажи о себе\n\nВыбери способ:",
-                reply_markup=build_about_me_main_markup()
+                "🪪 Мой профиль\n\nСейчас в профиле оставлены только два раздела:\n\n• Информация обо мне\n• Пройти мини-опрос",
+                reply_markup=build_profile_settings_markup()
             )
             await callback.answer()
             return
 
-        if data == "profile_settings_info":
-            token = await get_or_fetch_token(telegram_id, username, first_name)
-            if not token:
-                await callback.message.edit_text(
-                    "❌ Ошибка авторизации. Нажми /start.",
-                    reply_markup=build_profile_settings_markup()
-                )
-                await callback.answer()
-                return
-            await _render_profile_info_menu_from_settings(callback, token)
-            await callback.answer()
-            return
-
-        # Legacy compatibility for stale inline buttons.
         if data.startswith("profile_settings_view_"):
-            await callback.message.edit_text(
-                "📋 Кнопки этого экрана обновились.\n\nОткрой раздел ещё раз из списка.",
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="📋 К разделам", callback_data="profile_settings_info")],
-                    [InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")]
-                ])
-            )
             await callback.answer()
+            await callback.message.edit_text(
+                "📋 Информация обо мне\n\nОткрой раздел заново из списка.",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="◀️", callback_data="profile_settings_info")]])
+            )
             return
 
         await callback.answer()
     except Exception as e:
         logger.exception("Error in handle_profile_settings_callback: %s", e)
         try:
-            await callback.message.edit_text(
-                f"❌ Ошибка загрузки информации.\n\n{str(e)[:180]}",
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="◀️", callback_data="profile_settings_back")]
-                ])
-            )
+            await callback.answer("Ошибка. Попробуй позже.")
         except Exception:
-            try:
-                await callback.answer("Ошибка. Попробуй позже.")
-            except Exception:
-                pass
+            pass
