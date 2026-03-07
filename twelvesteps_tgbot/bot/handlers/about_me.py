@@ -1,6 +1,36 @@
 from .shared import *
 
 
+async def _get_mini_survey_progress(token: str) -> tuple[int, int]:
+    """Return answered / total counts for fixed mini-survey questions only."""
+    sections_data = await BACKEND_CLIENT.get_profile_sections(token)
+    sections = sections_data.get("sections", []) if sections_data else []
+
+    total_questions = 0
+    answered_question_ids: set[int] = set()
+
+    for section in sections:
+        section_id = section.get("id")
+        if not section_id:
+            continue
+        detail = await BACKEND_CLIENT.get_section_detail(token, section_id)
+        section_info = detail.get("section", {}) if detail else {}
+        questions = section_info.get("questions", []) or []
+        total_questions += len(questions)
+
+        try:
+            answers_data = await BACKEND_CLIENT.get_user_answers_for_section(token, section_id)
+            for answer in (answers_data.get("answers", []) if answers_data else []):
+                qid = answer.get("question_id")
+                if qid:
+                    answered_question_ids.add(qid)
+        except Exception as e:
+            logger.warning(f"Failed to get survey answers for section {section_id}: {e}")
+
+    return len(answered_question_ids), total_questions
+
+
+
 async def _start_mini_survey(callback: CallbackQuery, state: FSMContext) -> None:
     telegram_id = callback.from_user.id
     username = callback.from_user.username
