@@ -1761,7 +1761,6 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
             await callback.answer("Загружаю информацию...")
             username = callback.from_user.username
             first_name = callback.from_user.first_name
-            
             try:
                 token = await get_or_fetch_token(telegram_id, username, first_name)
                 if not token:
@@ -1770,75 +1769,31 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
                         reply_markup=build_profile_settings_markup()
                     )
                     return
-                
-                sections_data = await BACKEND_CLIENT.get_profile_sections(token)
-                sections = sections_data.get("sections", []) if sections_data else []
-                
-                if not sections:
-                    text = "📋 Информация обо мне\n\n" \
-                           "Пока нет сохраненной информации.\n\n" \
-                           "Ты можешь добавить информацию через раздел 'Расскажи о себе'."
-                    await callback.message.edit_text(
-                        text,
-                        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                            [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_back")]
-                        ])
-                    )
-                    return
-                
-                text_parts = ["📋 Информация обо мне\n"]
-                buttons = []
-                
-                for section in sections:
-                    section_id = section.get("id")
-                    section_name = section.get("name", "Раздел")
-                    section_icon = section.get("icon", "📁")
-                    display_name = _clean_section_title(section_name, section_icon)
-                    
-                    section_detail = await BACKEND_CLIENT.get_section_detail(token, section_id)
-                    if not section_detail:
-                        continue
-                    
-                    section_info = section_detail.get("section", {})
-                    questions = section_info.get("questions", [])
-                    entries = section_info.get("entries", [])
-                    
-                    answers_data = await BACKEND_CLIENT.get_user_answers_for_section(token, section_id)
-                    answers = answers_data.get("answers", []) if answers_data else []
-                    
-                    has_content = len(answers) > 0 or len(entries) > 0
-                    
-                    if has_content:
-                        status = f"✅ {len(answers)} ответов"
-                        if entries:
-                            status += f", {len(entries)} записей"
-                    else:
-                        status = "📝 Не заполнено"
-                    
-                    text_parts.append(f"\n{section_icon} {section_name}: {status}")
-                    
-                    if has_content:
-                        buttons.append([InlineKeyboardButton(
-                            text=f"{section_icon} {section_name}",
-                            callback_data=f"profile_settings_view_{section_id}"
-                        )])
-                
-                text_parts.append("\n\nНажми на раздел, чтобы посмотреть детали.")
-                
-                buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_back")])
-                
-                await callback.message.edit_text(
-                    "".join(text_parts),
-                    reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
-                )
+                await _render_profile_info_menu(callback, token, source="settings")
             except Exception as e:
                 logger.exception("Error loading profile info: %s", e)
                 await callback.message.edit_text(
                     "❌ Ошибка загрузки информации. Попробуй позже.",
                     reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_back")]
+                        [InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")]
                     ])
                 )
+            return
+
+        if data.startswith("profile_settings_view_"):
+            section_id = data.replace("profile_settings_view_", "")
+            await callback.answer("Загружаю раздел...")
+            username = callback.from_user.username
+            first_name = callback.from_user.first_name
+            try:
+                token = await get_or_fetch_token(telegram_id, username, first_name)
+                if not token:
+                    await callback.answer("Ошибка авторизации")
+                    return
+                await _render_profile_info_section(callback, token, int(section_id), source="settings")
+            except Exception as e:
+                logger.exception("Error viewing section: %s", e)
+                await callback.answer("Ошибка загрузки раздела")
             return
 
         if data == "profile_settings_back":
@@ -3128,6 +3083,14 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
             await state.set_state(ProfileStates.section_selection)
             await callback.answer()
 
+        elif data == "profile_back_to_settings":
+            await callback.message.edit_text(
+                "🪪 Профиль\n\nВыбери раздел:",
+                reply_markup=build_profile_settings_markup()
+            )
+            await callback.answer()
+            return
+
         elif data == "profile_skip":
             state_data = await state.get_data()
             questions = state_data.get("questions", [])
@@ -3375,111 +3338,22 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                 await callback.answer("❌ Ошибка при удалении")
 
         elif data == "profile_my_info":
-            # Показать все блоки профиля с информацией
-            sections_data = await BACKEND_CLIENT.get_profile_sections(token)
-            sections = sections_data.get("sections", []) if sections_data else []
-            
-            info_text = "📋 Информация обо мне\n\n"
-            info_text += "Здесь собрана вся информация из твоего профиля.\n\n"
-            info_text += "Выбери блок, чтобы посмотреть и отредактировать информацию:\n\n"
-            
-            buttons = []
-            row = []
-            
-            for section in sections:
-                section_id = section.get("id")
-                if section_id == 14:  # Пропускаем "Свободный рассказ"
-                    continue
-                
-                name = section.get("name", "")
-                button_text = name[:30] + "..." if len(name) > 30 else name
-                display_name = _clean_section_title(button_text, section.get("icon", ""))
-                
-                row.append(InlineKeyboardButton(
-                    text=display_name,
-                    callback_data=f"profile_info_section_{section_id}"
-                ))
-                
-                if len(row) >= 2:
-                    buttons.append(row)
-                    row = []
-            
-            if row:
-                buttons.append(row)
-            
-            buttons.append([InlineKeyboardButton(text="⏪ Назад", callback_data="profile_back")])
-            
-            await edit_long_message(
-                callback,
-                info_text,
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
-            )
+            await _render_profile_info_menu(callback, token, source="profile")
             await callback.answer()
             return
-        
+
+        elif data.startswith("profile_info_settings_section_"):
+            section_id = int(data.split("_")[-1])
+            await _render_profile_info_section(callback, token, section_id, source="settings")
+            await callback.answer()
+            return
+
         elif data.startswith("profile_info_section_"):
             section_id = int(data.split("_")[-1])
-            section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
-            section = section_data.get("section", {}) if section_data else {}
-            section_name = section.get("name", "Раздел")
-            
-            # Получить ответы пользователя для этого раздела
-            answers_data = await BACKEND_CLIENT.get_user_answers_for_section(token, section_id)
-            answers = answers_data.get("answers", []) if answers_data else []
-            
-            # Получить историю записей
-            history_data = await BACKEND_CLIENT.get_section_history(token, section_id, limit=10)
-            entries = history_data.get("entries", []) if history_data else []
-            
-            info_text = f"📋 {section_name}\n\n"
-            
-            if answers:
-                info_text += "💬 Ответы на вопросы:\n\n"
-                for answer in answers[:5]:
-                    question_text = answer.get("question_text", "")
-                    answer_text = answer.get("answer_text", "")
-                    if question_text and answer_text:
-                        info_text += f"❓ {question_text}\n"
-                        info_text += f"💭 {answer_text[:200]}{'...' if len(answer_text) > 200 else ''}\n\n"
-            
-            if entries:
-                info_text += "📝 Записи:\n\n"
-                for entry in entries[:5]:
-                    content = entry.get("content", "")
-                    subblock = entry.get("subblock_name", "")
-                    if content:
-                        info_text += f"• {content[:150]}{'...' if len(content) > 150 else ''}\n"
-                        if subblock:
-                            info_text += f"  ({subblock})\n"
-                        info_text += "\n"
-            
-            if not answers and not entries:
-                info_text += "В этом разделе пока нет информации.\n\n"
-                info_text += "Ты можешь:\n"
-                info_text += "• Ответить на вопросы раздела\n"
-                info_text += "• Добавить запись вручную\n"
-                info_text += "• Написать свободный рассказ"
-            
-            buttons = [
-                [InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"profile_section_{section_id}"), InlineKeyboardButton(text="➕ Добавить", callback_data=f"profile_add_entry_{section_id}")],
-            ]
-            if entries:
-                for idx, entry in enumerate(entries[:5], start=1):
-                    content = (entry.get("content") or "").strip()
-                    preview = content[:40] + ("..." if len(content) > 40 else "")
-                    entry_id = entry.get("id")
-                    if entry_id:
-                        buttons.append([InlineKeyboardButton(text=f"📝 {idx}. {preview}", callback_data=f"profile_entry_{entry_id}")])
-            buttons.append([InlineKeyboardButton(text="◀️", callback_data="profile_my_info")])
-            
-            await edit_long_message(
-                callback,
-                info_text,
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
-            )
+            await _render_profile_info_section(callback, token, section_id, source="profile")
             await callback.answer()
             return
-        
+
         elif data.startswith("profile_add_entry_"):
             section_id = int(data.split("_")[-1])
 
