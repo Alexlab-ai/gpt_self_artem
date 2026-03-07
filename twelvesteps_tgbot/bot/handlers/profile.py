@@ -1,5 +1,4 @@
 from .shared import *
-from .shared import _clean_section_title, _entry_preview_text, _section_nav_callback, _section_back_callback
 
 async def _render_profile_info_menu(callback: CallbackQuery, token: str, source: str = "settings") -> None:
     sections_data = await BACKEND_CLIENT.get_profile_sections(token)
@@ -44,6 +43,66 @@ async def _render_profile_info_menu(callback: CallbackQuery, token: str, source:
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
     )
 
+
+
+def _build_profile_info_section_markup(section_id: int, entries: list[dict], source: str = "settings") -> InlineKeyboardMarkup:
+    history_cb = f"profile_history_settings_{section_id}" if source == "settings" else f"profile_history_{section_id}"
+    add_cb = f"profile_add_entry_settings_{section_id}" if source == "settings" else f"profile_add_entry_{section_id}"
+    back_cb = _section_back_callback(source)
+    buttons = [
+        [
+            InlineKeyboardButton(text="🗃️ История", callback_data=history_cb),
+            InlineKeyboardButton(text="➕ Добавить", callback_data=add_cb),
+        ]
+    ]
+    for idx, entry in enumerate(entries[:5], 1):
+        entry_id = entry.get("id")
+        if not entry_id:
+            continue
+        preview = _entry_preview_text(entry.get("content", ""), limit=48) or "Запись"
+        if source == "settings":
+            cb = f"profile_entry_settings_{entry_id}_{section_id}"
+        else:
+            cb = f"profile_entry_{entry_id}"
+        buttons.append([InlineKeyboardButton(text=f"📝 {idx}. {preview}"[:64], callback_data=cb)])
+    buttons.append([InlineKeyboardButton(text="◀️", callback_data=back_cb)])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def _build_profile_history_markup(section_id: int, entries: list[dict], source: str = "settings", page: int = 0, per_page: int = 5) -> InlineKeyboardMarkup:
+    buttons = []
+    start_idx = page * per_page
+    end_idx = min(start_idx + per_page, len(entries))
+    for i in range(start_idx, end_idx):
+        entry = entries[i]
+        entry_id = entry.get("id")
+        if not entry_id:
+            continue
+        preview = _entry_preview_text(entry.get("content", ""), limit=48) or "Запись"
+        if source == "settings":
+            cb = f"profile_entry_settings_{entry_id}_{section_id}"
+        else:
+            cb = f"profile_entry_{entry_id}"
+        buttons.append([InlineKeyboardButton(text=f"📝 {i + 1}. {preview}"[:64], callback_data=cb)])
+    nav = []
+    if page > 0:
+        cb = f"profile_history_settings_{section_id}_page_{page-1}" if source == "settings" else f"profile_history_{section_id}_page_{page-1}"
+        nav.append(InlineKeyboardButton(text="⬅️", callback_data=cb))
+    if end_idx < len(entries):
+        cb = f"profile_history_settings_{section_id}_page_{page+1}" if source == "settings" else f"profile_history_{section_id}_page_{page+1}"
+        nav.append(InlineKeyboardButton(text="➡️", callback_data=cb))
+    if nav:
+        buttons.append(nav)
+    add_cb = f"profile_add_entry_settings_{section_id}" if source == "settings" else f"profile_add_entry_{section_id}"
+    back_cb = _section_nav_callback(section_id, source)
+    buttons.append([InlineKeyboardButton(text="➕ Добавить", callback_data=add_cb), InlineKeyboardButton(text="◀️", callback_data=back_cb)])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def _build_profile_entry_detail_markup(entry_id: int, section_id: int, source: str = "settings") -> InlineKeyboardMarkup:
+    back_cb = f"profile_history_settings_{section_id}" if source == "settings" else f"profile_history_{section_id}"
+    return InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="◀️", callback_data=back_cb)]])
+
 async def _render_profile_info_section(callback: CallbackQuery, token: str, section_id: int, source: str = "settings") -> None:
     section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
     section = section_data.get("section", {}) if section_data else {}
@@ -57,54 +116,15 @@ async def _render_profile_info_section(callback: CallbackQuery, token: str, sect
         )
         return
 
-    name = section.get("name", "Раздел")
-    icon = section.get("icon", "")
-    title = _clean_section_title(name, icon)
-
+    title = _clean_section_title(section.get("name", "Раздел"), section.get("icon", ""))
     history_data = await BACKEND_CLIENT.get_section_history(token, section_id)
     entries = history_data.get("entries", []) if history_data else []
-    entries = entries[:5]
-
-    buttons = [
-        [
-            InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"profile_add_entry_{section_id}"),
-            InlineKeyboardButton(text="➕ Добавить", callback_data=f"profile_add_entry_{section_id}")
-        ],
-        [InlineKeyboardButton(text="🗃️ История", callback_data=f"profile_history_{section_id}")],
-    ]
-
-    if entries:
-        for idx, entry in enumerate(entries, 1):
-            entry_id = entry.get("id")
-            if not entry_id:
-                continue
-            subblock = (entry.get("subblock_name") or "").strip()
-            preview = _entry_preview_text(entry.get("content", ""))
-            if subblock:
-                button_text = f"📝 {idx}. {subblock}: {preview}"
-            else:
-                button_text = f"📝 {idx}. {preview or 'Запись'}"
-            buttons.append([
-                InlineKeyboardButton(text=button_text[:64], callback_data=f"profile_entry_{entry_id}")
-            ])
-
-    buttons.append([InlineKeyboardButton(text="◀️", callback_data=_section_back_callback(source))])
-
     text = f"{title}\n\n"
-    if entries:
-        text += "📝 Последние записи:\n\n"
-        for entry in entries[:3]:
-            preview = _entry_preview_text(entry.get("content", ""), limit=80)
-            if preview:
-                text += f"• {preview}\n"
-        text += "\nНажми на запись ниже, чтобы открыть детали."
-    else:
-        text += "Пока не заполнено.\n\nДобавь первую запись или открой историю."
-
+    text += "Выбери действие или открой запись ниже." if entries else "Пока не заполнено. Добавь первую запись или открой историю."
     await edit_long_message(
         callback,
         text,
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+        reply_markup=_build_profile_info_section_markup(section_id, entries, source=source)
     )
 
 async def handle_profile(message: Message, state: FSMContext) -> None:
@@ -344,16 +364,12 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
             await callback.answer()
 
         elif data == "profile_back":
-            sections_data = await BACKEND_CLIENT.get_profile_sections(token)
-            sections = sections_data.get("sections", [])
-            markup = build_profile_sections_markup(sections)
-            await edit_long_message(
-                callback,
-                "📋 Выбери раздел:",
-                reply_markup=markup
+            await callback.message.edit_text(
+                "🪪 Мой профиль\n\nВыбери раздел:",
+                reply_markup=build_profile_settings_markup()
             )
-            await state.set_state(ProfileStates.section_selection)
             await callback.answer()
+            return
 
         elif data == "profile_back_to_settings":
             await callback.message.edit_text(
@@ -629,7 +645,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
         elif data.startswith("profile_add_entry_"):
             section_id = int(data.split("_")[-1])
 
-            await state.update_data(adding_section_id=section_id)
+            await state.update_data(adding_section_id=section_id, adding_source="profile")
             await state.set_state(ProfileStates.adding_entry)
 
             section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
@@ -948,13 +964,20 @@ async def handle_profile_add_entry(message: Message, state: FSMContext) -> None:
 
         if result.get("status") == "success":
             section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
-            section_name = section_data.get("section", {}).get("name", "Раздел")
+            section_name = _clean_section_title(section_data.get("section", {}).get("name", "Раздел"), section_data.get("section", {}).get("icon", ""))
+            source = state_data.get("adding_source", "profile")
+            if source == "settings":
+                history_cb = f"profile_history_settings_{section_id}"
+                back_cb = f"profile_info_settings_section_{section_id}"
+            else:
+                history_cb = f"profile_history_{section_id}"
+                back_cb = f"profile_info_section_{section_id}"
 
             await message.answer(
-                f"✅ Запись добавлена в раздел: {section_name}",
+                f"✅ Запись добавлена\n\n{section_name}",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="🗃️ Посмотреть историю", callback_data=f"profile_history_{section_id}")],
-                    [InlineKeyboardButton(text="⏪ Назад", callback_data=f"profile_section_{section_id}")]
+                    [InlineKeyboardButton(text="🗃️ История", callback_data=history_cb)],
+                    [InlineKeyboardButton(text="◀️", callback_data=back_cb)]
                 ])
             )
         else:
