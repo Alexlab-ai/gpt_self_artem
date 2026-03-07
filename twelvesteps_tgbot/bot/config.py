@@ -586,17 +586,21 @@ def build_free_story_add_entry_markup() -> InlineKeyboardMarkup:
 def build_mini_survey_markup(
     question_id: Optional[int] = None,
     can_skip: bool = False,
-    back_callback: str = "profile_back_to_settings"
+    back_callback: str = "profile_back_to_settings",
+    history_callback: Optional[str] = None,
 ) -> InlineKeyboardMarkup:
     """Markup for mini survey.
 
-    Назад возвращает в меню профиля, а не в общие настройки.
-    Кнопку паузы убрали по UX-решению.
+    В мини-опросе оставляем только историю ответов и кнопку назад.
     """
     buttons = []
     if can_skip:
         buttons.append([InlineKeyboardButton(text="🔁 Пропустить", callback_data="about_survey_skip")])
-    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data=back_callback)])
+    row = []
+    if history_callback:
+        row.append(InlineKeyboardButton(text="🗃️ История", callback_data=history_callback))
+    row.append(InlineKeyboardButton(text="◀️ Назад", callback_data=back_callback))
+    buttons.append(row)
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
