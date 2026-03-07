@@ -106,6 +106,7 @@ def _build_profile_entry_detail_markup(entry_id: int, section_id: int, source: s
 
 
 def _build_profile_survey_history_markup(section_id: int, entries: list[dict], page: int = 0, per_page: int = 5) -> InlineKeyboardMarkup:
+    """History inside mini survey: only answers + edit, without adding records."""
     buttons = []
     start_idx = page * per_page
     end_idx = min(start_idx + per_page, len(entries))
