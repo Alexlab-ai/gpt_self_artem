@@ -1648,13 +1648,136 @@ async def handle_step_settings_callback(callback: CallbackQuery, state: FSMConte
     await callback.answer()
 
 
+async def show_profile_settings_menu(callback: CallbackQuery) -> None:
+    await callback.message.edit_text(
+        "🪪 Мой профиль\n\n"
+        "Настройки профиля:",
+        reply_markup=build_profile_settings_markup()
+    )
+
+
+async def show_profile_info_menu(
+    callback: CallbackQuery,
+    token: str,
+    back_callback: str = "profile_settings_back"
+) -> None:
+    sections_data = await BACKEND_CLIENT.get_profile_sections(token)
+    sections = sections_data.get("sections", []) if sections_data else []
+
+    buttons = []
+    for section in sections:
+        section_id = section.get("id")
+        if not section_id or section_id == 14:
+            continue
+
+        section_name = section.get("name", "Раздел")
+        section_icon = section.get("icon", "📁")
+        button_text = f"{section_icon} {section_name}"
+        if len(button_text) > 60:
+            button_text = button_text[:57] + "..."
+
+        buttons.append([
+            InlineKeyboardButton(
+                text=button_text,
+                callback_data=f"profile_info_section_{section_id}"
+            )
+        ])
+
+    if not buttons:
+        buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data=back_callback)])
+        await edit_long_message(
+            callback,
+            "📋 Информация обо мне\n\nРазделы пока не настроены.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+        )
+        return
+
+    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data=back_callback)])
+
+    await edit_long_message(
+        callback,
+        "📋 Информация обо мне\n\n"
+        "Выбери раздел, чтобы посмотреть, дополнить или отредактировать информацию.",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+    )
+
+
+async def show_profile_info_section(
+    callback: CallbackQuery,
+    token: str,
+    section_id: int,
+    back_callback: str
+) -> None:
+    section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
+    section = section_data.get("section", {}) if section_data else {}
+    section_name = section.get("name", "Раздел")
+    section_icon = section.get("icon", "📁")
+
+    answers_data = await BACKEND_CLIENT.get_user_answers_for_section(token, section_id)
+    answers = answers_data.get("answers", []) if answers_data else []
+
+    history_data = await BACKEND_CLIENT.get_section_history(token, section_id, limit=10)
+    entries = history_data.get("entries", []) if history_data else []
+
+    info_text = f"{section_icon} {section_name}\n\n"
+
+    if answers:
+        info_text += "💬 Ответы на вопросы:\n\n"
+        for answer in answers[:5]:
+            question_text = answer.get("question_text", "")
+            answer_text = answer.get("answer_text", "")
+            if question_text and answer_text:
+                question_preview = question_text[:120] + ("..." if len(question_text) > 120 else "")
+                answer_preview = answer_text[:200] + ("..." if len(answer_text) > 200 else "")
+                info_text += f"❓ {question_preview}\n"
+                info_text += f"💭 {answer_preview}\n\n"
+
+    if entries:
+        info_text += "📝 Записи:\n\n"
+        for entry in entries[:5]:
+            content = entry.get("content", "")
+            subblock = entry.get("subblock_name", "")
+            if content:
+                content_preview = content[:150] + ("..." if len(content) > 150 else "")
+                info_text += f"• {content_preview}\n"
+                if subblock:
+                    info_text += f"  ({subblock})\n"
+                info_text += "\n"
+
+    if not answers and not entries:
+        info_text += "В этом разделе пока нет информации.\n\n"
+        info_text += "Ты можешь начать отвечать на вопросы или добавить запись вручную."
+
+    buttons = [
+        [InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"profile_section_{section_id}")],
+        [InlineKeyboardButton(text="🗃️ История", callback_data=f"profile_history_{section_id}")],
+        [InlineKeyboardButton(text="◀️ Назад к разделам", callback_data=back_callback)]
+    ]
+
+    await edit_long_message(
+        callback,
+        info_text,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+    )
+
+
+def get_profile_back_target(state_data: dict, default: str = "profile_back") -> str:
+    target = state_data.get("profile_back_target")
+    if target in {"profile_back", "profile_my_info", "profile_settings_info"}:
+        return target
+    return default
+
+
 async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle profile settings callbacks"""
     data = callback.data
     telegram_id = callback.from_user.id
+    username = callback.from_user.username
+    first_name = callback.from_user.first_name
 
     try:
-        if data == "profile_settings_back":
+        if data == "profile_settings_main_back":
+            await state.update_data(profile_back_target=None)
             await callback.message.edit_text(
                 "⚙️ Настройки\n\n"
                 "Выбери раздел настроек:",
@@ -1663,7 +1786,14 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
             await callback.answer()
             return
 
+        if data == "profile_settings_back":
+            await state.update_data(profile_back_target=None)
+            await show_profile_settings_menu(callback)
+            await callback.answer()
+            return
+
         if data == "profile_settings_about":
+            await state.update_data(profile_back_target=None)
             await callback.answer("Загружаю меню...")
             await callback.message.edit_text(
                 "🪪 Расскажи о себе\n\n"
@@ -1674,9 +1804,7 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
 
         if data == "profile_settings_info":
             await callback.answer("Загружаю информацию...")
-            username = callback.from_user.username
-            first_name = callback.from_user.first_name
-            
+
             try:
                 token = await get_or_fetch_token(telegram_id, username, first_name)
                 if not token:
@@ -1685,66 +1813,9 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
                         reply_markup=build_profile_settings_markup()
                     )
                     return
-                
-                sections_data = await BACKEND_CLIENT.get_profile_sections(token)
-                sections = sections_data.get("sections", []) if sections_data else []
-                
-                if not sections:
-                    text = "📋 Информация обо мне\n\n" \
-                           "Пока нет сохраненной информации.\n\n" \
-                           "Ты можешь добавить информацию через раздел 'Расскажи о себе'."
-                    await callback.message.edit_text(
-                        text,
-                        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                            [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_back")]
-                        ])
-                    )
-                    return
-                
-                text_parts = ["📋 Информация обо мне\n"]
-                buttons = []
-                
-                for section in sections:
-                    section_id = section.get("id")
-                    section_name = section.get("name", "Раздел")
-                    section_icon = section.get("icon", "📁")
-                    
-                    section_detail = await BACKEND_CLIENT.get_section_detail(token, section_id)
-                    if not section_detail:
-                        continue
-                    
-                    section_info = section_detail.get("section", {})
-                    questions = section_info.get("questions", [])
-                    entries = section_info.get("entries", [])
-                    
-                    answers_data = await BACKEND_CLIENT.get_user_answers_for_section(token, section_id)
-                    answers = answers_data.get("answers", []) if answers_data else []
-                    
-                    has_content = len(answers) > 0 or len(entries) > 0
-                    
-                    if has_content:
-                        status = f"✅ {len(answers)} ответов"
-                        if entries:
-                            status += f", {len(entries)} записей"
-                    else:
-                        status = "📝 Не заполнено"
-                    
-                    text_parts.append(f"\n{section_icon} {section_name}: {status}")
-                    
-                    if has_content:
-                        buttons.append([InlineKeyboardButton(
-                            text=f"{section_icon} {section_name}",
-                            callback_data=f"profile_settings_view_{section_id}"
-                        )])
-                
-                text_parts.append("\n\nНажми на раздел, чтобы посмотреть детали.")
-                
-                buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_back")])
-                
-                await callback.message.edit_text(
-                    "".join(text_parts),
-                    reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
-                )
+
+                await state.update_data(profile_back_target="profile_settings_info")
+                await show_profile_info_menu(callback, token, back_callback="profile_settings_back")
             except Exception as e:
                 logger.exception("Error loading profile info: %s", e)
                 await callback.message.edit_text(
@@ -1755,72 +1826,18 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
                 )
             return
 
-        if data == "profile_settings_back":
-            await callback.message.edit_text(
-                "🪪 Мой профиль\n\n"
-                "Настройки профиля:",
-                reply_markup=build_profile_settings_markup()
-            )
-            await callback.answer()
-            return
-
         if data.startswith("profile_settings_view_"):
             section_id = data.replace("profile_settings_view_", "")
             await callback.answer("Загружаю раздел...")
-            username = callback.from_user.username
-            first_name = callback.from_user.first_name
-            
+
             try:
                 token = await get_or_fetch_token(telegram_id, username, first_name)
                 if not token:
                     await callback.answer("Ошибка авторизации")
                     return
-                
-                section_detail = await BACKEND_CLIENT.get_section_detail(token, int(section_id))
-                if not section_detail:
-                    await callback.answer("Раздел не найден")
-                    return
-                
-                section_info = section_detail.get("section", {})
-                section_name = section_info.get("name", "Раздел")
-                section_icon = section_info.get("icon", "📁")
-                questions = section_info.get("questions", [])
-                entries = section_info.get("entries", [])
-                
-                answers_data = await BACKEND_CLIENT.get_user_answers_for_section(token, int(section_id))
-                answers = answers_data.get("answers", []) if answers_data else []
-                
-                text_parts = [f"{section_icon} {section_name}\n"]
-                
-                if answers:
-                    text_parts.append("\n📝 Ответы на вопросы:\n")
-                    for answer in answers[:5]:
-                        q_text = answer.get("question_text", "Вопрос")[:50]
-                        a_text = answer.get("answer_text", "")[:100]
-                        text_parts.append(f"• {q_text}...\n  ➜ {a_text}...\n")
-                    if len(answers) > 5:
-                        text_parts.append(f"... и ещё {len(answers) - 5} ответов\n")
-                
-                if entries:
-                    text_parts.append("\n📄 Записи:\n")
-                    for entry in entries[:3]:
-                        content = entry.get("content", "")[:100]
-                        text_parts.append(f"• {content}...\n")
-                    if len(entries) > 3:
-                        text_parts.append(f"... и ещё {len(entries) - 3} записей\n")
-                
-                if not answers and not entries:
-                    text_parts.append("\nПока нет сохраненной информации в этом разделе.")
-                
-                buttons = [
-                    [InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"profile_section_{section_id}")],
-                    [InlineKeyboardButton(text="◀️ Назад к списку", callback_data="profile_settings_info")]
-                ]
-                
-                await callback.message.edit_text(
-                    "".join(text_parts),
-                    reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
-                )
+
+                await state.update_data(profile_back_target="profile_settings_info")
+                await show_profile_info_section(callback, token, int(section_id), back_callback="profile_settings_info")
             except Exception as e:
                 logger.exception("Error viewing section: %s", e)
                 await callback.answer("Ошибка загрузки раздела")
@@ -2810,6 +2827,7 @@ async def handle_profile(message: Message, state: FSMContext) -> None:
             await message.answer("Разделы профиля пока не настроены.")
             return
 
+        await state.update_data(profile_back_target=None)
         markup = build_profile_sections_markup(sections)
         await send_long_message(
             message,
@@ -2839,6 +2857,19 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
             await callback.answer("Ошибка авторизации. Нажми /start.")
             return
 
+        state_data = await state.get_data()
+        current_back_target = get_profile_back_target(state_data)
+
+        if data == "profile_back_to_settings":
+            await state.update_data(profile_back_target=None)
+            await callback.message.edit_text(
+                "⚙️ Настройки\n\n"
+                "Выбери раздел настроек:",
+                reply_markup=build_main_settings_markup()
+            )
+            await callback.answer()
+            return
+
         if data.startswith("profile_section_"):
             section_id = int(data.split("_")[-1])
             logger.info(f"User {telegram_id} selected section {section_id}")
@@ -2857,7 +2888,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
 
             if not questions:
                 section_name = section.get('name', 'Раздел')
-                markup = build_profile_actions_markup(section_id)
+                markup = build_profile_actions_markup(section_id, back_callback=current_back_target)
                 logger.info(f"Section {section_id} ({section_name}) has no questions, showing buttons: {len(markup.inline_keyboard)} rows")
                 try:
                     await edit_long_message(
@@ -2905,7 +2936,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
 
                 if all_answered:
                     section_name = section.get('name', 'Раздел')
-                    markup = build_profile_actions_markup(section_id)
+                    markup = build_profile_actions_markup(section_id, back_callback=current_back_target)
                     logger.info(f"Section {section_id} ({section_name}) all questions answered, showing buttons: {len(markup.inline_keyboard)} rows")
                     try:
                         await edit_long_message(
@@ -2955,7 +2986,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                         "• Посмотреть историю записей\n"
                         "• Добавить новую запись вручную\n"
                         "• Написать свободный рассказ",
-                        reply_markup=build_profile_actions_markup(section_id)
+                        reply_markup=build_profile_actions_markup(section_id, back_callback=current_back_target)
                     )
                 except Exception as e:
                     logger.warning(f"Failed to edit message for section {section_id}: {e}, sending new message")
@@ -2966,7 +2997,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                         "• Посмотреть историю записей\n"
                         "• Добавить новую запись вручную\n"
                         "• Написать свободный рассказ",
-                        reply_markup=build_profile_actions_markup(section_id)
+                        reply_markup=build_profile_actions_markup(section_id, back_callback=current_back_target)
                     )
                 await state.set_state(ProfileStates.section_selection)
                 await callback.answer()
@@ -2981,10 +3012,11 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                 section_id=section_id,
                 current_question_id=first_question.get("id"),
                 questions=questions,
-                question_index=0
+                question_index=0,
+                profile_back_target=current_back_target
             )
 
-            markup = build_profile_actions_markup(section_id)
+            markup = build_profile_actions_markup(section_id, back_callback=current_back_target)
             if first_question.get("is_optional"):
                 skip_markup = build_profile_skip_markup()
                 markup.inline_keyboard.append(skip_markup.inline_keyboard[0])
@@ -3029,15 +3061,21 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
             await callback.answer()
 
         elif data == "profile_back":
-            sections_data = await BACKEND_CLIENT.get_profile_sections(token)
-            sections = sections_data.get("sections", [])
-            markup = build_profile_sections_markup(sections)
-            await edit_long_message(
-                callback,
-                "📋 Выбери раздел:",
-                reply_markup=markup
-            )
-            await state.set_state(ProfileStates.section_selection)
+            if current_back_target == "profile_settings_info":
+                await show_profile_info_menu(callback, token, back_callback="profile_settings_back")
+            elif current_back_target == "profile_my_info":
+                await show_profile_info_menu(callback, token, back_callback="profile_back")
+            else:
+                sections_data = await BACKEND_CLIENT.get_profile_sections(token)
+                sections = sections_data.get("sections", [])
+                markup = build_profile_sections_markup(sections)
+                await edit_long_message(
+                    callback,
+                    "📋 Выбери раздел:",
+                    reply_markup=markup
+                )
+                await state.update_data(profile_back_target=None)
+                await state.set_state(ProfileStates.section_selection)
             await callback.answer()
 
         elif data == "profile_skip":
@@ -3051,7 +3089,8 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
 
                 await state.update_data(question_index=next_index, current_question_id=next_question.get("id"))
 
-                markup = build_profile_actions_markup(state_data.get("section_id"))
+                skip_back_target = get_profile_back_target(state_data)
+                markup = build_profile_actions_markup(state_data.get("section_id"), back_callback=skip_back_target)
                 if next_question.get("is_optional"):
                     skip_markup = build_profile_skip_markup()
                     markup.inline_keyboard.append(skip_markup.inline_keyboard[0])
@@ -3083,7 +3122,12 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                     callback,
                     f"🗃️ История раздела: {section_name}\n\n"
                     "История пока пуста. Добавь первую запись!",
-                    reply_markup=build_section_history_markup(section_id, entries, page)
+                    reply_markup=build_section_history_markup(
+                        section_id,
+                        entries,
+                        page,
+                        back_callback=(f"profile_info_section_{section_id}" if current_back_target in {"profile_my_info", "profile_settings_info"} else f"profile_section_{section_id}")
+                    )
                 )
             else:
                 section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
@@ -3116,7 +3160,12 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                         history_text += f"📅 {date_str}\n"
                     history_text += "\n"
 
-                markup = build_section_history_markup(section_id, entries, page)
+                markup = build_section_history_markup(
+                    section_id,
+                    entries,
+                    page,
+                    back_callback=(f"profile_info_section_{section_id}" if current_back_target in {"profile_my_info", "profile_settings_info"} else f"profile_section_{section_id}")
+                )
                 logger.info(f"Showing history for section {section_id} with {len(entries)} entries, page {page}, {len(markup.inline_keyboard)} button rows")
                 try:
                     await edit_long_message(
@@ -3187,7 +3236,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                 entry_text += f"📅 {date_str}\n"
             entry_text += f"\n💬 Содержание:\n{content}"
 
-            markup = build_entry_detail_markup(entry_id, section_id)
+            markup = build_entry_detail_markup(entry_id, section_id, back_callback=f"profile_history_{section_id}")
             logger.info(f"Showing entry detail {entry_id} with {len(markup.inline_keyboard)} button rows")
             try:
                 await edit_long_message(
@@ -3229,7 +3278,8 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
             await state.update_data(
                 editing_entry_id=entry_id,
                 editing_section_id=section_id,
-                editing_content=entry.get("content", "")
+                editing_content=entry.get("content", ""),
+                profile_back_target=current_back_target
             )
             await state.set_state(ProfileStates.editing_entry)
 
@@ -3272,7 +3322,12 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                         callback,
                         f"🗃️ История раздела: {section_name}\n\n"
                         "История пуста.",
-                        reply_markup=build_section_history_markup(section_id, entries, 0)
+                        reply_markup=build_section_history_markup(
+                            section_id,
+                            entries,
+                            0,
+                            back_callback=(f"profile_info_section_{section_id}" if current_back_target in {"profile_my_info", "profile_settings_info"} else f"profile_section_{section_id}")
+                        )
                     )
                 else:
                     section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
@@ -3280,115 +3335,37 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                     await edit_long_message(
                         callback,
                         f"🗃️ История раздела: {section_name}\n\nВсего записей: {len(entries)}",
-                        reply_markup=build_section_history_markup(section_id, entries, 0)
+                        reply_markup=build_section_history_markup(
+                            section_id,
+                            entries,
+                            0,
+                            back_callback=(f"profile_info_section_{section_id}" if current_back_target in {"profile_my_info", "profile_settings_info"} else f"profile_section_{section_id}")
+                        )
                     )
             except Exception as e:
                 logger.exception(f"Error deleting entry {entry_id}: {e}")
                 await callback.answer("❌ Ошибка при удалении")
 
         elif data == "profile_my_info":
-            # Показать все блоки профиля с информацией
-            sections_data = await BACKEND_CLIENT.get_profile_sections(token)
-            sections = sections_data.get("sections", []) if sections_data else []
-            
-            info_text = "📋 Информация обо мне\n\n"
-            info_text += "Здесь собрана вся информация из твоего профиля.\n\n"
-            info_text += "Выбери блок, чтобы посмотреть и отредактировать информацию:\n\n"
-            
-            buttons = []
-            row = []
-            
-            for section in sections:
-                section_id = section.get("id")
-                if section_id == 14:  # Пропускаем "Свободный рассказ"
-                    continue
-                
-                name = section.get("name", "")
-                button_text = name[:30] + "..." if len(name) > 30 else name
-                
-                row.append(InlineKeyboardButton(
-                    text=button_text,
-                    callback_data=f"profile_info_section_{section_id}"
-                ))
-                
-                if len(row) >= 2:
-                    buttons.append(row)
-                    row = []
-            
-            if row:
-                buttons.append(row)
-            
-            buttons.append([InlineKeyboardButton(text="⏪ Назад", callback_data="profile_back")])
-            
-            await edit_long_message(
-                callback,
-                info_text,
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
-            )
+            await state.update_data(profile_back_target="profile_my_info")
+            await show_profile_info_menu(callback, token, back_callback="profile_back")
             await callback.answer()
             return
-        
+
         elif data.startswith("profile_info_section_"):
             section_id = int(data.split("_")[-1])
-            section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
-            section = section_data.get("section", {}) if section_data else {}
-            section_name = section.get("name", "Раздел")
-            
-            # Получить ответы пользователя для этого раздела
-            answers_data = await BACKEND_CLIENT.get_user_answers_for_section(token, section_id)
-            answers = answers_data.get("answers", []) if answers_data else []
-            
-            # Получить историю записей
-            history_data = await BACKEND_CLIENT.get_section_history(token, section_id, limit=10)
-            entries = history_data.get("entries", []) if history_data else []
-            
-            info_text = f"📋 {section_name}\n\n"
-            
-            if answers:
-                info_text += "💬 Ответы на вопросы:\n\n"
-                for answer in answers[:5]:
-                    question_text = answer.get("question_text", "")
-                    answer_text = answer.get("answer_text", "")
-                    if question_text and answer_text:
-                        info_text += f"❓ {question_text}\n"
-                        info_text += f"💭 {answer_text[:200]}{'...' if len(answer_text) > 200 else ''}\n\n"
-            
-            if entries:
-                info_text += "📝 Записи:\n\n"
-                for entry in entries[:5]:
-                    content = entry.get("content", "")
-                    subblock = entry.get("subblock_name", "")
-                    if content:
-                        info_text += f"• {content[:150]}{'...' if len(content) > 150 else ''}\n"
-                        if subblock:
-                            info_text += f"  ({subblock})\n"
-                        info_text += "\n"
-            
-            if not answers and not entries:
-                info_text += "В этом разделе пока нет информации.\n\n"
-                info_text += "Ты можешь:\n"
-                info_text += "• Ответить на вопросы раздела\n"
-                info_text += "• Добавить запись вручную\n"
-                info_text += "• Написать свободный рассказ"
-            
-            buttons = [
-                [InlineKeyboardButton(text="✏️ Редактировать", callback_data=f"profile_section_{section_id}")],
-                [InlineKeyboardButton(text="🗃️ История", callback_data=f"profile_history_{section_id}")],
-                [InlineKeyboardButton(text="⏪ Назад", callback_data="profile_my_info")]
-            ]
-            
-            await edit_long_message(
-                callback,
-                info_text,
-                reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
-            )
+            info_back_target = get_profile_back_target(state_data, default="profile_my_info")
+            if info_back_target not in {"profile_my_info", "profile_settings_info"}:
+                info_back_target = "profile_my_info"
+            await state.update_data(profile_back_target=info_back_target)
+            await show_profile_info_section(callback, token, section_id, back_callback=info_back_target)
             await callback.answer()
             return
-        
+
         elif data.startswith("profile_add_entry_"):
             section_id = int(data.split("_")[-1])
 
-            await state.update_data(adding_section_id=section_id)
+            await state.update_data(adding_section_id=section_id, profile_back_target=current_back_target)
             await state.set_state(ProfileStates.adding_entry)
 
             section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
@@ -3571,6 +3548,7 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
             is_generated = state_data.get("is_generated_question", False)
             questions = state_data.get("questions", [])
             question_index = state_data.get("question_index", 0)
+            back_target = get_profile_back_target(state_data)
 
             if not section_id:
                 await message.answer("Ошибка: не найден раздел. Начни заново с /profile")
@@ -3606,7 +3584,7 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                         is_generated_question=False
                     )
 
-                markup = build_profile_actions_markup(section_id)
+                markup = build_profile_actions_markup(section_id, back_callback=back_target)
                 if next_question.get("is_optional"):
                     skip_markup = build_profile_skip_markup()
                     markup.inline_keyboard.append(skip_markup.inline_keyboard[0])
@@ -3619,7 +3597,7 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
             else:
                 await message.answer(
                     "✅ Все вопросы в этом разделе отвечены!",
-                    reply_markup=build_profile_actions_markup(section_id)
+                    reply_markup=build_profile_actions_markup(section_id, back_callback=back_target)
                 )
                 await state.set_state(ProfileStates.section_selection)
 
@@ -3696,6 +3674,7 @@ async def handle_profile_add_entry(message: Message, state: FSMContext) -> None:
 
         state_data = await state.get_data()
         section_id = state_data.get("adding_section_id")
+        back_target = get_profile_back_target(state_data)
 
         if not section_id:
             await message.answer("Ошибка: не найден раздел.")
@@ -3712,17 +3691,20 @@ async def handle_profile_add_entry(message: Message, state: FSMContext) -> None:
             section_data = await BACKEND_CLIENT.get_section_detail(token, section_id)
             section_name = section_data.get("section", {}).get("name", "Раздел")
 
+            success_back_callback = f"profile_info_section_{section_id}" if back_target in {"profile_my_info", "profile_settings_info"} else f"profile_section_{section_id}"
             await message.answer(
                 f"✅ Запись добавлена в раздел: {section_name}",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="🗃️ Посмотреть историю", callback_data=f"profile_history_{section_id}")],
-                    [InlineKeyboardButton(text="⏪ Назад", callback_data=f"profile_section_{section_id}")]
+                    [InlineKeyboardButton(text="⏪ Назад", callback_data=success_back_callback)]
                 ])
             )
         else:
             await message.answer("❌ Ошибка при добавлении записи.")
 
         await state.clear()
+        if back_target in {"profile_my_info", "profile_settings_info"}:
+            await state.update_data(profile_back_target=back_target)
 
     except Exception as exc:
         logger.exception("Error handling profile add entry: %s", exc)
@@ -3747,6 +3729,7 @@ async def handle_profile_edit_entry(message: Message, state: FSMContext) -> None
         state_data = await state.get_data()
         entry_id = state_data.get("editing_entry_id")
         section_id = state_data.get("editing_section_id")
+        back_target = get_profile_back_target(state_data)
 
         if not entry_id or not section_id:
             await message.answer("Ошибка: не найдена запись.")
@@ -3771,6 +3754,8 @@ async def handle_profile_edit_entry(message: Message, state: FSMContext) -> None
             await message.answer("❌ Ошибка при обновлении записи.")
 
         await state.clear()
+        if back_target in {"profile_my_info", "profile_settings_info"}:
+            await state.update_data(profile_back_target=back_target)
 
     except Exception as exc:
         logger.exception("Error handling profile edit entry: %s", exc)
