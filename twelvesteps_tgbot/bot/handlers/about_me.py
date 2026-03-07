@@ -1,6 +1,16 @@
 from .shared import *
 
 
+async def _mini_survey_header(token: str) -> str:
+    """Build header with progress for fixed mini-survey questions."""
+    answered, total = await _get_mini_survey_progress(token)
+    if total > 0:
+        current = min(answered + 1, total)
+        return f"👣 Пройти мини-опрос\n\n📋 Вопрос {current} из {total}"
+    return "👣 Пройти мини-опрос"
+
+
+
 async def _get_mini_survey_progress(token: str) -> tuple[int, int]:
     """Return answered / total counts for fixed mini-survey questions only."""
     sections_data = await BACKEND_CLIENT.get_profile_sections(token)
@@ -74,9 +84,10 @@ async def _start_mini_survey(callback: CallbackQuery, state: FSMContext) -> None
 
     question_text = first_question.get("question_text", "")
     is_optional = first_question.get("is_optional", False)
+    header = await _mini_survey_header(token)
     await edit_long_message(
         callback,
-        f"👣 Пройти мини-опрос\n\n❓ {question_text}",
+        f"{header}\n\n❓ {question_text}",
         reply_markup=build_mini_survey_markup(first_question.get("id"), can_skip=is_optional, history_callback=f"profile_survey_history_{section_id}")
     )
 
@@ -251,9 +262,10 @@ async def handle_about_callback(callback: CallbackQuery, state: FSMContext) -> N
                     survey_question_id=next_question_id,
                     survey_is_generated=is_generated,
                 )
+                header = await _mini_survey_header(token)
                 await edit_long_message(
                     callback,
-                    f"👣 Пройти мини-опрос\n\n❓ {question_text}",
+                    f"{header}\n\n❓ {question_text}",
                     reply_markup=build_mini_survey_markup(next_question_id if next_question_id else -1, can_skip=is_optional, history_callback=f"profile_survey_history_{current_section_id}")
                 )
                 return
@@ -267,9 +279,10 @@ async def handle_about_callback(callback: CallbackQuery, state: FSMContext) -> N
                     survey_question_id=next_question.get("id"),
                     survey_is_generated=False,
                 )
+                header = await _mini_survey_header(token)
                 await edit_long_message(
                     callback,
-                    f"👣 Пройти мини-опрос\n\n❓ {next_question.get('question_text', '')}",
+                    f"{header}\n\n❓ {next_question.get('question_text', '')}",
                     reply_markup=build_mini_survey_markup(next_question.get("id"), can_skip=next_question.get("is_optional", False), history_callback=f"profile_survey_history_{section_id}")
                 )
                 return
