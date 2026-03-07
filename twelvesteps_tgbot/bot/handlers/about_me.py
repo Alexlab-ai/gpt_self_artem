@@ -115,6 +115,7 @@ async def handle_about_callback(callback: CallbackQuery, state: FSMContext) -> N
     try:
         if data == "about_back":
             await callback.answer()
+            await state.clear()
             await callback.message.edit_text(
                 "🪪 Мой профиль\n\nВыбери раздел:",
                 reply_markup=build_profile_settings_markup()
@@ -255,7 +256,7 @@ async def handle_about_callback(callback: CallbackQuery, state: FSMContext) -> N
             await callback.answer()
             await state.clear()
             await callback.message.edit_text(
-                "⏸ Мини-опрос поставлен на паузу.\n\nМожешь продолжить позже.",
+                "🪪 Мой профиль\n\nВыбери раздел:",
                 reply_markup=build_profile_settings_markup()
             )
             return
