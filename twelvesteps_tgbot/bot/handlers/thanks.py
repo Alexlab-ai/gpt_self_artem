@@ -51,7 +51,10 @@ async def handle_thanks_callback(callback: CallbackQuery, state: FSMContext) -> 
     telegram_id = callback.from_user.id
 
     if data == "thanks_back":
-        await callback.message.delete()
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
         await callback.message.answer(MAIN_MENU_TEXT, reply_markup=build_main_menu_markup())
         await callback.answer()
         return
@@ -146,7 +149,7 @@ async def handle_thanks_callback(callback: CallbackQuery, state: FSMContext) -> 
                             from datetime import datetime
                             dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
                             date_str = dt.strftime("%d.%m.%Y")
-                        except:
+                        except (ValueError, AttributeError):
                             date_str = ""
                     else:
                         date_str = ""
@@ -201,4 +204,3 @@ async def handle_thanks_entry_input(message: Message, state: FSMContext) -> None
         "Нажми '💾 Сохранить' чтобы сохранить или '❌ Отмена' чтобы отменить.",
         reply_markup=build_thanks_input_markup()
     )
-
