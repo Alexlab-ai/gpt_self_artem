@@ -14,7 +14,10 @@ async def handle_faq_callback(callback: CallbackQuery, state: FSMContext) -> Non
     data = callback.data
 
     if data == "faq_back":
-        await callback.message.delete()
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
         await callback.message.answer(MAIN_MENU_TEXT, reply_markup=build_main_menu_markup())
         await callback.answer()
         return
@@ -41,4 +44,3 @@ async def handle_faq_callback(callback: CallbackQuery, state: FSMContext) -> Non
         return
 
     await callback.answer()
-
