@@ -889,10 +889,12 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
             await callback.answer()
 
         elif data.startswith("profile_confirm_delete_section_"):
+            await callback.answer()
             section_id = int(data.split("_")[-1])
+            logger.info(f"User {callback.from_user.id} confirming delete of section {section_id}")
             try:
-                await BACKEND_CLIENT.delete_section(token, section_id)
-                await callback.answer("✅ Раздел удалён")
+                result = await BACKEND_CLIENT.delete_section(token, section_id)
+                logger.info(f"Delete section {section_id} result: {result}")
                 await _render_profile_info_menu(callback, token, source="profile")
             except Exception as e:
                 logger.exception(f"Error deleting section {section_id}: {e}")
@@ -908,7 +910,13 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                         ])
                     )
                 else:
-                    await callback.answer("❌ Ошибка при удалении раздела")
+                    await edit_long_message(
+                        callback,
+                        f"❌ Ошибка при удалении раздела.\n\nПопробуй позже.",
+                        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                            [InlineKeyboardButton(text="◀️ Назад", callback_data=f"profile_info_section_{section_id}")]
+                        ])
+                    )
 
         elif data.startswith("profile_delete_"):
             entry_id = int(data.split("_")[-1])
