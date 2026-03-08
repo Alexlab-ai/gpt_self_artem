@@ -239,7 +239,7 @@ async def handle_step_answer_mode(message: Message, state: FSMContext) -> None:
             try:
                 current_question_id_data = await BACKEND_CLIENT.get_current_question_id(token)
                 current_question_id = current_question_id_data.get("question_id")
-            except:
+            except Exception:
                 pass
 
             try:
@@ -1646,7 +1646,10 @@ async def handle_steps_navigation_callback(callback: CallbackQuery, state: FSMCo
             return
 
         if data == "steps_to_main":
-            await callback.message.delete()
+            try:
+                await callback.message.delete()
+            except Exception:
+                pass
             await show_main_menu(callback.message)
             await callback.answer()
             return
@@ -1919,4 +1922,3 @@ async def handle_template_field_input(message: Message, state: FSMContext) -> No
         logger.exception("Error handling template field input for %s: %s", telegram_id, exc)
         await message.answer("Произошла ошибка. Попробуй ещё раз.")
         await state.clear()
-
