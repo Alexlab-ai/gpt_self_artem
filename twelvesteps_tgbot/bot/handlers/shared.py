@@ -123,14 +123,7 @@ class AboutMeStates(StatesGroup):
 
 
 def _clean_section_title(name: str, icon: str = "") -> str:
-    """Build display title from section name and icon.
-
-    Cases:
-    - name='М ои любимые места', icon='📍' → '📍 Мои любимые места' (fixes DB corruption)
-    - name='👨\u200d👩\u200d👧 Семья',   icon='👨\u200d👩\u200d👧' → '👨\u200d👩\u200d👧 Семья' (base sections)
-    - name='Мои места',           icon='🏠' → '🏠 Мои места'
-    - name='Спорт',               icon=''   → 'Спорт'
-    """
+    """Build display title from section name and icon."""
     import re
     raw_name = (name or "").strip()
     if not raw_name:
@@ -138,8 +131,15 @@ def _clean_section_title(name: str, icon: str = "") -> str:
 
     display_icon = (icon or "").strip()
 
-    # Базовые разделы из БД: name уже содержит эмодзи ("👨\u200d👩\u200d👧 Семья") — используем как есть
-    if re.match(r'^[^\u0400-\u04FFa-zA-Z0-9]', raw_name):
+    logger.info(
+        "[clean_title] name=%r bytes=%s icon=%r",
+        raw_name,
+        [hex(ord(c)) for c in raw_name[:6]],
+        display_icon,
+    )
+
+    # Базовые разделы из БД: name уже содержит эмодзи ("👨‍👩‍👧 Семья") — используем как есть
+    if re.match(r'^[^Ѐ-ӿa-zA-Z0-9]', raw_name):
         return raw_name
 
     # Кастомные разделы — чиним пробел внутри первого слова
