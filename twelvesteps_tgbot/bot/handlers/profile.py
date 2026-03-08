@@ -62,18 +62,19 @@ async def _mini_survey_header(token: str) -> str:
 from .shared import _clean_section_title, _entry_preview_text, _section_nav_callback, _section_back_callback
 from .about_me import find_first_unanswered_question
 
-async def _render_profile_info_menu(callback: CallbackQuery, token: str, source: str = "settings") -> None:
+async def _render_profile_info_menu(callback: CallbackQuery, token: str, source: str = "settings", send_new: bool = False) -> None:
     sections_data = await BACKEND_CLIENT.get_profile_sections(token)
     sections = sections_data.get("sections", []) if sections_data else []
 
+    markup_back = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="◀️", callback_data=_section_back_callback(source))]
+    ])
+
     if not sections:
-        await edit_long_message(
-            callback,
-            "📋 Информация обо мне\n\nРазделы пока недоступны.",
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="◀️", callback_data=_section_back_callback(source))]
-            ])
-        )
+        if send_new:
+            await callback.message.answer("📋 Информация обо мне\n\nРазделы пока недоступны.", reply_markup=markup_back)
+        else:
+            await edit_long_message(callback, "📋 Информация обо мне\n\nРазделы пока недоступны.", reply_markup=markup_back)
         return
 
     buttons = []
@@ -95,16 +96,13 @@ async def _render_profile_info_menu(callback: CallbackQuery, token: str, source:
     buttons.append([InlineKeyboardButton(text="➕ Добавить раздел", callback_data="profile_custom_section")])
     buttons.append([InlineKeyboardButton(text="◀️", callback_data=_section_back_callback(source))])
 
-    text = (
-        "📋 Информация обо мне\n\n"
-        "Выбери раздел.\n"
-        "Внутри раздела сразу будут видны последние записи и действия."
-    )
-    await edit_long_message(
-        callback,
-        text,
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
-    )
+    text = "📋 Информация обо мне\n\nВыбери раздел."
+    markup = InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    if send_new:
+        await callback.message.answer(text, reply_markup=markup)
+    else:
+        await edit_long_message(callback, text, reply_markup=markup)
 
 
 
@@ -130,7 +128,10 @@ def _build_profile_info_section_markup(section_id: int, entries: list[dict], sou
         buttons.append([InlineKeyboardButton(text=f"📝 {idx}. {preview}"[:64], callback_data=cb)])
     if is_custom:
         buttons.append([InlineKeyboardButton(text="🗑 Удалить раздел", callback_data=f"profile_delete_section_{section_id}")])
-    buttons.append([InlineKeyboardButton(text="◀️", callback_data=back_cb)])
+    buttons.append([
+        InlineKeyboardButton(text="◀️ В профиль", callback_data=back_cb),
+        InlineKeyboardButton(text="🏠 Меню", callback_data="root_menu"),
+    ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -458,7 +459,11 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
 
         elif data == "profile_back_to_settings":
             await state.clear()
-            await callback.message.edit_text(
+            try:
+                await callback.message.delete()
+            except Exception:
+                pass
+            await callback.message.answer(
                 "🪪 Мой профиль\n\nВыбери раздел:",
                 reply_markup=build_profile_settings_markup()
             )
@@ -1408,13 +1413,22 @@ async def handle_profile_custom_section(message: Message, state: FSMContext) -> 
             await state.clear()
             return
 
-        # Извлекаем эмодзи если пользователь поставил его в начале
+        # Извлекаем эмодзи если пользователь поставил его в начало
         icon = None
-        import unicodedata
-        first_char = section_name[0] if section_name else ""
-        if first_char and (ord(first_char) > 127 or unicodedata.category(first_char) == "So"):
-            icon = first_char
-            section_name = section_name[1:].strip()
+        import re as _re
+        # Надёжный паттерн для эмодзи в начале строки
+        _emoji_pattern = _re.compile(
+            r'^([\U0001F300-\U0001F9FF'
+            r'\U00002600-\U000027BF'
+            r'\U0001FA00-\U0001FA9F'
+            r'\u2702-\u27B0'
+            r'\u24C2-\U0001F251'
+            r']+)'
+        )
+        emoji_match = _emoji_pattern.match(section_name)
+        if emoji_match:
+            icon = emoji_match.group(1)
+            section_name = section_name[len(icon):].strip()
 
         # Если эмодзи нет — предлагаем выбрать из готовых вариантов по смыслу
         if not icon:
