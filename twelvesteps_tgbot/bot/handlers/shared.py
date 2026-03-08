@@ -123,7 +123,14 @@ class AboutMeStates(StatesGroup):
 
 
 def _clean_section_title(name: str, icon: str = "") -> str:
-    """Build display title from section name and icon."""
+    """Build display title from section name and icon.
+
+    Обрабатывает 4 случая из БД:
+    1. name='👨‍👩‍👧 Семья', icon='👨‍👩‍👧' → '👨‍👩‍👧 Семья'  (базовые разделы)
+    2. name='юбимая еда 🥘', icon='Л'     → 'Любимая еда 🥘' (баг: буква в icon)
+    3. name='Мои места',  icon='🏠'        → '🏠 Мои места'   (нормальный кастом)
+    4. name='Спорт',      icon='🏆'        → '🏆 Спорт'       (эмодзи в icon)
+    """
     import re
     raw_name = (name or "").strip()
     if not raw_name:
@@ -131,24 +138,21 @@ def _clean_section_title(name: str, icon: str = "") -> str:
 
     display_icon = (icon or "").strip()
 
-    logger.info(
-        "[clean_title] name=%r bytes=%s icon=%r",
-        raw_name,
-        [hex(ord(c)) for c in raw_name[:6]],
-        display_icon,
-    )
-
-    # Базовые разделы из БД: name уже содержит эмодзи ("👨‍👩‍👧 Семья") — используем как есть
-    if re.match(r'^[^Ѐ-ӿa-zA-Z0-9]', raw_name):
+    # Базовые разделы: name уже начинается с эмодзи — используем как есть
+    if re.match(r'^[^\u0400-\u04FFa-zA-Z0-9]', raw_name):
         return raw_name
 
-    # Кастомные разделы — чиним пробел внутри первого слова
-    # Баг: старый код срезал первую букву → в БД сохранилось "М ои любимые места"
-    fixed_name = re.sub(r'^([А-ЯЁA-Z])\s+(?=[а-яёa-z])', r'\1', raw_name)
+    # БАГ-КЕЙС: icon содержит одну кириллическую букву (первая буква имени отрезана)
+    # Пример: icon='Л', name='юбимая еда 🥘' → 'Любимая еда 🥘'
+    if display_icon and len(display_icon) == 1 and re.match(r'[А-ЯЁа-яёA-Za-z]', display_icon):
+        restored = display_icon + raw_name
+        return restored
 
+    # Обычный кастомный раздел с реальным эмодзи в icon
     if display_icon:
-        return f"{display_icon} {fixed_name}"
-    return fixed_name
+        return f"{display_icon} {raw_name}"
+
+    return raw_name
 
 def _entry_preview_text(content: str, limit: int = 42) -> str:
     content = (content or "").replace("\n", " ").strip()
