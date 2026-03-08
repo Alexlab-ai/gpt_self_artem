@@ -8,6 +8,7 @@ from bot.config import (
     build_profile_skip_markup,
     build_profile_settings_markup,
     build_mini_survey_markup,
+    build_survey_complete_markup,
     build_free_story_markup,
     build_free_story_add_entry_markup,
     build_section_history_markup,
@@ -107,7 +108,7 @@ async def _render_profile_info_menu(callback: CallbackQuery, token: str, source:
 
 
 
-def _build_profile_info_section_markup(section_id: int, entries: list[dict], source: str = "settings") -> InlineKeyboardMarkup:
+def _build_profile_info_section_markup(section_id: int, entries: list[dict], source: str = "settings", is_custom: bool = False) -> InlineKeyboardMarkup:
     history_cb = f"profile_history_settings_{section_id}" if source == "settings" else f"profile_history_{section_id}"
     add_cb = f"profile_add_entry_settings_{section_id}" if source == "settings" else f"profile_add_entry_{section_id}"
     back_cb = _section_back_callback(source)
@@ -127,6 +128,8 @@ def _build_profile_info_section_markup(section_id: int, entries: list[dict], sou
         else:
             cb = f"profile_entry_{entry_id}"
         buttons.append([InlineKeyboardButton(text=f"📝 {idx}. {preview}"[:64], callback_data=cb)])
+    if is_custom:
+        buttons.append([InlineKeyboardButton(text="🗑 Удалить раздел", callback_data=f"profile_delete_section_{section_id}")])
     buttons.append([InlineKeyboardButton(text="◀️", callback_data=back_cb)])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -216,6 +219,7 @@ async def _render_profile_info_section(callback: CallbackQuery, token: str, sect
         return
 
     title = _clean_section_title(section.get("name", "Раздел"), section.get("icon", ""))
+    is_custom = section.get("is_custom", False)
     history_data = await BACKEND_CLIENT.get_section_history(token, section_id)
     entries = history_data.get("entries", []) if history_data else []
     text = f"{title}\n\n"
@@ -223,7 +227,7 @@ async def _render_profile_info_section(callback: CallbackQuery, token: str, sect
     await edit_long_message(
         callback,
         text,
-        reply_markup=_build_profile_info_section_markup(section_id, entries, source=source)
+        reply_markup=_build_profile_info_section_markup(section_id, entries, source=source, is_custom=is_custom)
     )
 
 async def handle_profile(message: Message, state: FSMContext) -> None:
@@ -435,7 +439,10 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
         elif data == "profile_custom_section":
             await edit_long_message(
                 callback,
-                "➕ Как назовём новый раздел? (можно добавить эмодзи)"
+                "➕ Как назовём новый раздел?\n\nМожно добавить эмодзи в начало, например: 🎯 Цели",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_my_info")]
+                ])
             )
             await state.set_state(ProfileStates.creating_custom_section)
             await callback.answer()
@@ -829,6 +836,61 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
             )
             await callback.answer()
 
+        elif data.startswith("profile_emoji_"):
+            emoji_choice = data.removeprefix("profile_emoji_")
+            state_data = await state.get_data()
+            section_name = state_data.get("pending_section_name", "Новый раздел")
+            icon = None if emoji_choice == "none" else emoji_choice
+
+            try:
+                await BACKEND_CLIENT.create_custom_section(token, section_name, icon)
+                await state.clear()
+
+                sections_data = await BACKEND_CLIENT.get_profile_sections(token)
+                sections = sections_data.get("sections", []) if sections_data else []
+                buttons = []
+                for section in sections:
+                    sid = section.get("id")
+                    if not sid or sid == 14:
+                        continue
+                    title = _clean_section_title(section.get("name", "Раздел"), section.get("icon", ""))
+                    buttons.append([InlineKeyboardButton(text=title[:64], callback_data=f"profile_info_section_{sid}")])
+                buttons.append([InlineKeyboardButton(text="➕ Добавить раздел", callback_data="profile_custom_section")])
+                buttons.append([InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")])
+
+                await edit_long_message(
+                    callback,
+                    "✅ Раздел создан!\n\n📋 Информация обо мне\n\nВыбери раздел.",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+                )
+            except Exception as e:
+                logger.exception("Error creating section after emoji choice: %s", e)
+                await callback.answer("❌ Ошибка при создании раздела")
+            await callback.answer()
+
+        elif data.startswith("profile_delete_section_"):
+            section_id = int(data.split("_")[-1])
+            # Показываем подтверждение
+            await edit_long_message(
+                callback,
+                "🗑 Удалить раздел?\n\nЭто действие нельзя отменить. Все записи в разделе будут удалены.",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="✅ Да, удалить", callback_data=f"profile_confirm_delete_section_{section_id}")],
+                    [InlineKeyboardButton(text="◀️ Отмена", callback_data=f"profile_info_section_{section_id}")]
+                ])
+            )
+            await callback.answer()
+
+        elif data.startswith("profile_confirm_delete_section_"):
+            section_id = int(data.split("_")[-1])
+            try:
+                await BACKEND_CLIENT.delete_section(token, section_id)
+                await callback.answer("✅ Раздел удалён")
+                await _render_profile_info_menu(callback, token, source="profile")
+            except Exception as e:
+                logger.exception(f"Error deleting section {section_id}: {e}")
+                await callback.answer("❌ Ошибка при удалении раздела")
+
         elif data.startswith("profile_delete_"):
             entry_id = int(data.split("_")[-1])
 
@@ -874,6 +936,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                 await callback.answer("❌ Ошибка при удалении")
 
         elif data == "profile_my_info":
+            await state.clear()
             await _render_profile_info_menu(callback, token, source="profile")
             await callback.answer()
             return
@@ -988,9 +1051,11 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                     if not next_question_data:
                         await state.clear()
                         await message.answer(
-                            "✅ Мини-опрос завершён!\n\n"
-                            "Спасибо за ответы.",
-                            reply_markup=build_profile_settings_markup()
+                            "🎉 Базовый профиль завершён!\n\n"
+                            "Ты ответил на все вопросы.\n"
+                            "Теперь GPT знает тебя значительно лучше.\n\n"
+                            "Что дальше?",
+                            reply_markup=build_survey_complete_markup()
                         )
                         return
                     next_section_id = next_question_data["section_id"]
@@ -1084,9 +1149,11 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                 else:
                     await state.clear()
                     await message.answer(
-                        "✅ Мини-опрос завершён!\n\n"
-                        "Спасибо за ответы.",
-                        reply_markup=build_profile_settings_markup()
+                        "🎉 Базовый профиль завершён!\n\n"
+                        "Ты ответил на все вопросы.\n"
+                        "Теперь GPT знает тебя значительно лучше.\n\n"
+                        "Что дальше?",
+                        reply_markup=build_survey_complete_markup()
                     )
         else:
             section_id = state_data.get("section_id")
@@ -1332,7 +1399,7 @@ async def handle_profile_custom_section(message: Message, state: FSMContext) -> 
     telegram_id = message.from_user.id
     username = message.from_user.username
     first_name = message.from_user.first_name
-    section_name = message.text
+    section_name = (message.text or "").strip()
 
     try:
         token = await get_or_fetch_token(telegram_id, username, first_name)
@@ -1341,43 +1408,63 @@ async def handle_profile_custom_section(message: Message, state: FSMContext) -> 
             await state.clear()
             return
 
+        # Извлекаем эмодзи если пользователь поставил его в начале
         icon = None
-        if section_name and len(section_name) > 0:
-            first_char = section_name[0]
-            if ord(first_char) > 127:
-                icon = first_char
-                section_name = section_name[1:].strip()
+        import unicodedata
+        first_char = section_name[0] if section_name else ""
+        if first_char and (ord(first_char) > 127 or unicodedata.category(first_char) == "So"):
+            icon = first_char
+            section_name = section_name[1:].strip()
 
+        # Если эмодзи нет — предлагаем выбрать из готовых вариантов по смыслу
+        if not icon:
+            # Сохраняем имя раздела в state и предлагаем эмодзи
+            await state.update_data(pending_section_name=section_name)
+            emoji_options = [
+                ("⭐️", "profile_emoji_⭐️"), ("🎯", "profile_emoji_🎯"),
+                ("💡", "profile_emoji_💡"), ("❤️", "profile_emoji_❤️"),
+                ("🌿", "profile_emoji_🌿"), ("🏆", "profile_emoji_🏆"),
+                ("🎨", "profile_emoji_🎨"), ("✈️", "profile_emoji_✈️"),
+                ("💼", "profile_emoji_💼"), ("📖", "profile_emoji_📖"),
+                ("🏠", "profile_emoji_🏠"), ("🎵", "profile_emoji_🎵"),
+            ]
+            buttons = []
+            row = []
+            for emoji, cb in emoji_options:
+                row.append(InlineKeyboardButton(text=emoji, callback_data=cb))
+                if len(row) == 4:
+                    buttons.append(row)
+                    row = []
+            if row:
+                buttons.append(row)
+            buttons.append([InlineKeyboardButton(text="➡️ Без эмодзи", callback_data="profile_emoji_none")])
+            buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="profile_my_info")])
+            await message.answer(
+                f"Раздел «{section_name}»\n\nВыбери эмодзи для раздела:",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+            )
+            return
+
+        # Эмодзи уже есть — создаём раздел сразу
         result = await BACKEND_CLIENT.create_custom_section(token, section_name, icon)
-        section_id = result.get("section_id")
+        await state.clear()
 
-        # Показываем меню профиля с добавленным разделом
         sections_data = await BACKEND_CLIENT.get_profile_sections(token)
         sections = sections_data.get("sections", []) if sections_data else []
-
         buttons = []
         for section in sections:
             sid = section.get("id")
             if not sid or sid == 14:
                 continue
-            name = section.get("name", "Раздел")
-            icon_s = section.get("icon", "")
-            title = _clean_section_title(name, icon_s)
-            buttons.append([
-                InlineKeyboardButton(
-                    text=title[:64],
-                    callback_data=f"profile_info_section_{sid}"
-                )
-            ])
-
+            title = _clean_section_title(section.get("name", "Раздел"), section.get("icon", ""))
+            buttons.append([InlineKeyboardButton(text=title[:64], callback_data=f"profile_info_section_{sid}")])
         buttons.append([InlineKeyboardButton(text="➕ Добавить раздел", callback_data="profile_custom_section")])
         buttons.append([InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")])
 
         await message.answer(
-            f"✅ Раздел '{section_name}' создан!\n\n📋 Информация обо мне\n\nВыбери раздел.",
+            f"✅ Раздел создан!\n\n📋 Информация обо мне\n\nВыбери раздел.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
         )
-        await state.clear()
 
     except Exception as exc:
         logger.exception("Error creating custom section for %s: %s", telegram_id, exc)
