@@ -19,7 +19,10 @@ async def handle_feelings_callback(callback: CallbackQuery, state: FSMContext) -
     data = callback.data
 
     if data == "feelings_back":
-        await callback.message.delete()
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
         await callback.message.answer(MAIN_MENU_TEXT, reply_markup=build_main_menu_markup())
         await callback.answer()
         return
@@ -71,4 +74,3 @@ async def handle_feeling_selection_callback(callback: CallbackQuery, state: FSMC
         return
 
     await callback.answer()
-
