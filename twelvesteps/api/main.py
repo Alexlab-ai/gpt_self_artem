@@ -1270,6 +1270,8 @@ async def delete_section(
     if not deleted:
         raise HTTPException(status_code=400, detail="Failed to delete section")
 
+    await current_user.session.commit()
+
     return {
         "status": "success",
         "message": "Section deleted",
@@ -2105,4 +2107,3 @@ async def get_gratitudes(
         page=page,
         page_size=page_size
     )
-
