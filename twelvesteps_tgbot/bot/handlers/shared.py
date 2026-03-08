@@ -123,18 +123,21 @@ class AboutMeStates(StatesGroup):
 
 
 def _clean_section_title(name: str, icon: str = "") -> str:
+    """Build display title: 'emoji name'. Never cuts cyrillic letters."""
     import re
     raw_name = (name or "").strip()
-    # Убираем эмодзи и спецсимволы только с начала строки, без жадного \s*
-    cleaned_name = re.sub(r'^[\U00010000-\U0010ffff\u2600-\u27FF\uFE00-\uFE0F\u20D0-\u20FF]+\s*', '', raw_name).strip()
+    # Strip leading emoji/symbols — allow Cyrillic \u0400-\u04FF, latin \w, digits
+    cleaned_name = re.sub(r'^[^\u0400-\u04FFa-zA-Z0-9]+', '', raw_name).strip()
     if not cleaned_name:
-        cleaned_name = raw_name.strip()
-    # Нормализуем icon
+        cleaned_name = raw_name  # fallback
+    # Normalize icon: strip variation selectors
     cleaned_icon = re.sub(r'[\uFE0F\u20E3]', '', (icon or '').strip())
-    # Если имя уже начинается с этого icon — не дублируем
-    if cleaned_icon and cleaned_name.startswith(cleaned_icon):
-        return cleaned_name
-    return f"{cleaned_icon} {cleaned_name}".strip() if cleaned_icon else (cleaned_name or raw_name or "Раздел")
+    if not cleaned_icon:
+        return cleaned_name or "Раздел"
+    # Avoid double-emoji: if name already starts with that icon, just clean the name
+    if raw_name.startswith(cleaned_icon):
+        return f"{cleaned_icon} {cleaned_name}".strip()
+    return f"{cleaned_icon} {cleaned_name}".strip()
 
 def _entry_preview_text(content: str, limit: int = 42) -> str:
     content = (content or "").replace("\n", " ").strip()
