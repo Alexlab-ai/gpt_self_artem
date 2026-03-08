@@ -123,21 +123,37 @@ class AboutMeStates(StatesGroup):
 
 
 def _clean_section_title(name: str, icon: str = "") -> str:
-    """Build display title: 'emoji name'. Never cuts cyrillic letters."""
+    """Build display title from section name and icon.
+
+    Cases:
+    - name='👨‍👩‍👧 Семья', icon='👨‍👩‍👧'  → '👨‍👩‍👧 Семья'  (name already has emoji, use as-is)
+    - name='Мои места',       icon='🏠'      → '🏠 Мои места' (prepend icon)
+    - name='🏠 Мои места',    icon='🏠'      → '🏠 Мои места' (name already has it)
+    - name='Мои места',       icon=''        → 'Мои места'    (no icon, return clean name)
+    """
     import re
     raw_name = (name or "").strip()
-    # Strip leading emoji/symbols — allow Cyrillic \u0400-\u04FF, latin \w, digits
-    cleaned_name = re.sub(r'^[^\u0400-\u04FFa-zA-Z0-9]+', '', raw_name).strip()
-    if not cleaned_name:
-        cleaned_name = raw_name  # fallback
-    # Normalize icon: strip variation selectors
-    cleaned_icon = re.sub(r'[\uFE0F\u20E3]', '', (icon or '').strip())
+    if not raw_name:
+        return "Раздел"
+
+    # Normalize icon — strip variation selectors
+    cleaned_icon = re.sub(r'[\uFE0F\u20E3]', '', (icon or "").strip())
+
+    # If no icon — return name as-is (strip only leading non-letter/non-digit symbols)
     if not cleaned_icon:
-        return cleaned_name or "Раздел"
-    # Avoid double-emoji: if name already starts with that icon, just clean the name
-    if raw_name.startswith(cleaned_icon):
-        return f"{cleaned_icon} {cleaned_name}".strip()
-    return f"{cleaned_icon} {cleaned_name}".strip()
+        # Strip leading emoji/symbols to get clean text, but only if name starts with them
+        text_only = re.sub(r'^[^\u0400-\u04FFa-zA-Z0-9]+', '', raw_name).strip()
+        return text_only if text_only else raw_name
+
+    # If name already starts with the icon (or an emoji) — return name as-is
+    # This handles the DB case where name='👨‍👩‍👧 Семья' and icon='👨‍👩‍👧'
+    emoji_prefix_match = re.match(r'^[^\u0400-\u04FFa-zA-Z0-9]+', raw_name)
+    if emoji_prefix_match:
+        # Name already has emoji prefix — use name as-is
+        return raw_name
+
+    # Name has no emoji prefix — prepend icon
+    return f"{cleaned_icon} {raw_name}"
 
 def _entry_preview_text(content: str, limit: int = 42) -> str:
     content = (content or "").replace("\n", " ").strip()
