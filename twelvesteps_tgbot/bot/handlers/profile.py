@@ -221,6 +221,7 @@ async def _render_profile_info_section(callback: CallbackQuery, token: str, sect
 
     title = _clean_section_title(section.get("name", "Раздел"), section.get("icon", ""))
     is_custom = section.get("is_custom", False)
+    logger.info(f"[render_section] section_id={section_id} name={section.get('name')!r} is_custom={is_custom} user_id={section.get('user_id')}")
     history_data = await BACKEND_CLIENT.get_section_history(token, section_id)
     entries = history_data.get("entries", []) if history_data else []
     text = f"{title}\n\n"
