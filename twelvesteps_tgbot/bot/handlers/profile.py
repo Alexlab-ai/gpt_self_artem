@@ -127,7 +127,7 @@ def _build_profile_info_section_markup(section_id: int, entries: list[dict], sou
             cb = f"profile_entry_{entry_id}"
         buttons.append([InlineKeyboardButton(text=f"📝 {idx}. {preview}"[:64], callback_data=cb)])
     if is_custom:
-        buttons.append([InlineKeyboardButton(text="🗑 Удалить раздел", callback_data=f"profile_delete_section_{section_id}")])
+        buttons.append([InlineKeyboardButton(text="🗑 Удалить раздел", callback_data=f"profile_delete_section_{source}_{section_id}")])
     buttons.append([
         InlineKeyboardButton(text="◀️ К разделам", callback_data=back_cb),
         InlineKeyboardButton(text="🏠 Меню", callback_data="root_menu"),
@@ -445,7 +445,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                 "Можешь добавить свой эмодзи в начало: 🎯 Цели\n"
                 "Или просто напиши название — выберем эмодзи вместе.",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_my_info")]
+                    [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_info")]
                 ])
             )
             await state.set_state(ProfileStates.creating_custom_section)
@@ -862,7 +862,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                     if not sid or sid == 14:
                         continue
                     title = _clean_section_title(section.get("name", "Раздел"), section.get("icon", ""))
-                    buttons.append([InlineKeyboardButton(text=title[:64], callback_data=f"profile_info_section_{sid}")])
+                    buttons.append([InlineKeyboardButton(text=title[:64], callback_data=_section_nav_callback(sid, "settings"))])
                 buttons.append([InlineKeyboardButton(text="➕ Добавить раздел", callback_data="profile_custom_section")])
                 buttons.append([InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")])
 
@@ -877,30 +877,43 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
             await callback.answer()
 
         elif data.startswith("profile_delete_section_"):
-            section_id = int(data.split("_")[-1])
-            # Показываем подтверждение
+            payload = data.removeprefix("profile_delete_section_")
+            parts = payload.split("_", 1)
+            if len(parts) == 2 and parts[0] in {"settings", "profile"}:
+                source = parts[0]
+                section_id = int(parts[1])
+            else:
+                source = "settings"
+                section_id = int(payload)
             await edit_long_message(
                 callback,
                 "🗑 Удалить раздел?\n\nЭто действие нельзя отменить. Все записи в разделе будут удалены.",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="✅ Да, удалить", callback_data=f"profile_confirm_delete_section_{section_id}")],
-                    [InlineKeyboardButton(text="◀️ Отмена", callback_data=f"profile_info_section_{section_id}")]
+                    [InlineKeyboardButton(text="✅ Да, удалить", callback_data=f"profile_confirm_delete_section_{source}_{section_id}")],
+                    [InlineKeyboardButton(text="◀️ Отмена", callback_data=_section_nav_callback(section_id, source))]
                 ])
             )
             await callback.answer()
 
         elif data.startswith("profile_confirm_delete_section_"):
             await callback.answer()
-            section_id = int(data.split("_")[-1])
-            logger.info(f"User {callback.from_user.id} confirming delete of section {section_id}")
+            payload = data.removeprefix("profile_confirm_delete_section_")
+            parts = payload.split("_", 1)
+            if len(parts) == 2 and parts[0] in {"settings", "profile"}:
+                source = parts[0]
+                section_id = int(parts[1])
+            else:
+                source = "settings"
+                section_id = int(payload)
+            logger.info(f"User {callback.from_user.id} confirming delete of section {section_id} from source={source}")
             try:
                 result = await BACKEND_CLIENT.delete_section(token, section_id)
                 logger.info(f"Delete section {section_id} result: {result}")
-                # Отправляем новым сообщением — edit вызовет "message not modified" если список не изменился
-                await _render_profile_info_menu(callback, token, source="profile", send_new=True)
+                await _render_profile_info_menu(callback, token, source=source, send_new=False)
             except Exception as e:
                 logger.exception(f"Error deleting section {section_id}: {e}")
                 err_text = str(e)
+                menu_cb = "profile_settings_info" if source == "settings" else "profile_my_info"
                 if "403" in err_text:
                     await edit_long_message(
                         callback,
@@ -908,7 +921,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                         "Разделы созданные до обновления бота привязаны к старым данным. "
                         "Создай новый раздел — он удалится без проблем.",
                         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                            [InlineKeyboardButton(text="◀️ К разделам", callback_data="profile_my_info")]
+                            [InlineKeyboardButton(text="◀️ К разделам", callback_data=menu_cb)]
                         ])
                     )
                 else:
@@ -916,9 +929,11 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                         callback,
                         f"❌ Ошибка при удалении раздела.\n\nПопробуй позже.",
                         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                            [InlineKeyboardButton(text="◀️ К разделам", callback_data="profile_my_info")]
+                            [InlineKeyboardButton(text="◀️ К разделам", callback_data=menu_cb)]
                         ])
                     )
+
+        
 
         elif data.startswith("profile_delete_"):
             entry_id = int(data.split("_")[-1])
@@ -1476,7 +1491,7 @@ async def handle_profile_custom_section(message: Message, state: FSMContext) -> 
             if row:
                 buttons.append(row)
             buttons.append([InlineKeyboardButton(text="➡️ Без эмодзи", callback_data="profile_emoji_none")])
-            buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="profile_my_info")])
+            buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_info")])
             await message.answer(
                 f"Раздел «{section_name}»\n\nВыбери эмодзи для раздела:",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -1495,7 +1510,7 @@ async def handle_profile_custom_section(message: Message, state: FSMContext) -> 
             if not sid or sid == 14:
                 continue
             title = _clean_section_title(section.get("name", "Раздел"), section.get("icon", ""))
-            buttons.append([InlineKeyboardButton(text=title[:64], callback_data=f"profile_info_section_{sid}")])
+            buttons.append([InlineKeyboardButton(text=title[:64], callback_data=_section_nav_callback(sid, "settings"))])
         buttons.append([InlineKeyboardButton(text="➕ Добавить раздел", callback_data="profile_custom_section")])
         buttons.append([InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")])
 
