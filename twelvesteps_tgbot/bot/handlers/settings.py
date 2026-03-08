@@ -32,7 +32,10 @@ async def handle_main_settings_callback(callback: CallbackQuery, state: FSMConte
     first_name = callback.from_user.first_name
 
     if data == "main_settings_back":
-        await callback.message.delete()
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
         await callback.message.answer(MAIN_MENU_TEXT, reply_markup=build_main_menu_markup())
         await callback.answer()
         return
@@ -273,4 +276,3 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
             )
         except Exception:
             await callback.answer("Ошибка. Попробуй позже.")
-
