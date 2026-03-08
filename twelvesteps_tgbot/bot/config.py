@@ -601,6 +601,15 @@ def build_mini_survey_markup(
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
+def build_survey_complete_markup() -> InlineKeyboardMarkup:
+    """Markup shown after all 52 base survey questions are completed (Phase 1 done)."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔁 Углублённый опрос", callback_data="survey_deepening")],
+        [InlineKeyboardButton(text="📋 Вернуться в профиль", callback_data="profile_back_to_settings")],
+        [InlineKeyboardButton(text="✅ Закончить на сегодня", callback_data="survey_finish_today")],
+    ])
+
+
 def build_about_section_actions_markup(section_id: str) -> InlineKeyboardMarkup:
     """Actions inside an about me section."""
     return InlineKeyboardMarkup(inline_keyboard=[
