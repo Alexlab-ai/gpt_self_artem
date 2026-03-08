@@ -75,7 +75,10 @@ async def handle_root_callback(callback: CallbackQuery, state: FSMContext) -> No
         await callback.answer()
         return
     if data == "root_close":
-        await callback.message.delete()
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
         await show_main_menu(callback.message)
         await callback.answer()
         return
@@ -92,22 +95,34 @@ async def handle_root_callback(callback: CallbackQuery, state: FSMContext) -> No
         await callback.answer()
         return
     if data == "root_steps":
-        await callback.message.delete()
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
         await callback.answer()
         await handle_steps(callback.message, state)
         return
     if data == "root_day":
-        await callback.message.delete()
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
         await callback.answer()
         await handle_day(callback.message, state)
         return
     if data == "root_feelings":
-        await callback.message.delete()
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
         await callback.answer()
         await handle_feelings(callback.message, state)
         return
     if data == "root_thanks":
-        await callback.message.delete()
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
         await callback.answer()
         await handle_thanks_menu(callback.message, state)
         return
@@ -163,7 +178,7 @@ async def handle_reset(message: Message, state: FSMContext) -> None:
             try:
                 status = await BACKEND_CLIENT.get_status(access_token)
                 await send_welcome_back(message, user, status)
-            except:
+            except Exception:
                 await message.answer(
                     "🔄 Состояние сброшено. С возвращением!",
                     reply_markup=build_main_menu_markup()
@@ -254,7 +269,7 @@ async def handle_message(message: Message, debug: bool) -> None:
              try:
                 data = json.loads(backend_reply)
                 reply_text = data.get("reply", "Error parsing reply")
-             except:
+             except (json.JSONDecodeError, TypeError):
                 reply_text = backend_reply
         else:
              reply_text = backend_reply.reply
@@ -313,7 +328,7 @@ async def handle_start(message: Message, state: FSMContext) -> None:
 
     try:
         status = await BACKEND_CLIENT.get_status(access_token)
-    except:
+    except Exception:
         await message.answer("С возвращением!", reply_markup=build_main_menu_markup())
         return
 
