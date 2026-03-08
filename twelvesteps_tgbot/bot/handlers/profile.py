@@ -129,7 +129,7 @@ def _build_profile_info_section_markup(section_id: int, entries: list[dict], sou
     if is_custom:
         buttons.append([InlineKeyboardButton(text="🗑 Удалить раздел", callback_data=f"profile_delete_section_{section_id}")])
     buttons.append([
-        InlineKeyboardButton(text="◀️ В профиль", callback_data=back_cb),
+        InlineKeyboardButton(text="◀️ К разделам", callback_data=back_cb),
         InlineKeyboardButton(text="🏠 Меню", callback_data="root_menu"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -440,7 +440,9 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
         elif data == "profile_custom_section":
             await edit_long_message(
                 callback,
-                "➕ Как назовём новый раздел?\n\nМожно добавить эмодзи в начало, например: 🎯 Цели",
+                "➕ Как назовём новый раздел?\n\n"
+                "Можешь добавить свой эмодзи в начало: 🎯 Цели\n"
+                "Или просто напиши название — выберем эмодзи вместе.",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_my_info")]
                 ])
@@ -894,7 +896,19 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                 await _render_profile_info_menu(callback, token, source="profile")
             except Exception as e:
                 logger.exception(f"Error deleting section {section_id}: {e}")
-                await callback.answer("❌ Ошибка при удалении раздела")
+                err_text = str(e)
+                if "403" in err_text:
+                    await edit_long_message(
+                        callback,
+                        "❌ Этот раздел нельзя удалить.\n\n"
+                        "Разделы созданные до обновления бота привязаны к старым данным. "
+                        "Создай новый раздел — он удалится без проблем.",
+                        reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                            [InlineKeyboardButton(text="◀️ Назад", callback_data=f"profile_info_section_{section_id}")]
+                        ])
+                    )
+                else:
+                    await callback.answer("❌ Ошибка при удалении раздела")
 
         elif data.startswith("profile_delete_"):
             entry_id = int(data.split("_")[-1])
