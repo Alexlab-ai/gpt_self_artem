@@ -1,4 +1,18 @@
-from .shared import *
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.fsm.context import FSMContext
+from bot.backend import BACKEND_CLIENT, get_or_fetch_token
+from bot.config import (
+    build_main_menu_markup,
+    build_main_settings_markup,
+    build_reminders_settings_markup,
+    build_language_settings_markup,
+    build_profile_settings_markup,
+    build_steps_settings_markup,
+    build_settings_steps_list_markup,
+    build_settings_questions_list_markup,
+    build_step_settings_markup,
+)
+from .shared import MAIN_MENU_TEXT, logger
 from .profile import _render_profile_info_menu, _render_profile_info_section
 from .about_me import _start_mini_survey
 

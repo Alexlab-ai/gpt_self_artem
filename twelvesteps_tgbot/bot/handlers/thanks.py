@@ -1,4 +1,16 @@
-from .shared import *
+import datetime
+from aiogram.types import Message, CallbackQuery
+from aiogram.fsm.context import FSMContext
+from bot.backend import BACKEND_CLIENT, get_or_fetch_token
+from bot.config import (
+    build_main_menu_markup,
+    build_error_markup,
+    build_thanks_menu_markup,
+    build_thanks_input_markup,
+    build_thanks_history_markup,
+)
+from bot.utils import send_long_message
+from .shared import ThanksStates, MAIN_MENU_TEXT, USER_LOGS, logger
 
 async def handle_thanks(message: Message, state: FSMContext) -> None:
     telegram_id = message.from_user.id

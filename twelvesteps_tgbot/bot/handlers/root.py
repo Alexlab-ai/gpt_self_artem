@@ -1,5 +1,46 @@
-from .shared import *
+import json
+import datetime
 from functools import partial
+
+from aiogram import Dispatcher, F
+from aiogram.filters import Command, CommandStart, StateFilter
+from aiogram.fsm.context import FSMContext
+from aiogram.types import Message, CallbackQuery
+
+from bot.backend import (
+    BACKEND_CLIENT,
+    TOKEN_STORE,
+    USER_CACHE,
+    Log,
+    call_legacy_chat,
+    get_display_name,
+    get_current_step_question,
+    get_or_fetch_token,
+)
+from bot.config import (
+    build_main_menu_markup,
+    build_error_markup,
+    build_exit_markup,
+    build_root_menu_markup,
+    build_tariffs_menu_markup,
+    build_faq_menu_markup,
+    build_main_settings_markup,
+    build_profile_settings_markup,
+)
+from bot.utils import send_long_message
+from bot.onboarding import OnboardingStates, register_onboarding_handlers
+
+from .shared import (
+    StepState,
+    ProfileStates,
+    SosStates,
+    Step10States,
+    ThanksStates,
+    AboutMeStates,
+    MAIN_MENU_TEXT,
+    USER_LOGS,
+    logger,
+)
 from .steps import handle_steps, handle_about_step, handle_steps_settings, handle_step_answer, handle_step_answer_mode, handle_template_selection, handle_template_filling_callback, handle_steps_navigation_callback, handle_step_selection_callback, handle_question_view_callback, handle_step_action_callback, handle_progress_callback, handle_template_field_input, handle_steps_settings_callback
 from .step10 import handle_day, handle_step10_answer, handle_step10_callback
 from .feelings import handle_feelings, handle_feelings_callback, handle_feeling_selection_callback

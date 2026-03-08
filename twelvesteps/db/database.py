@@ -22,9 +22,13 @@ class Base(DeclarativeBase):
     pass
 
 
+_database_url = os.getenv("DATABASE_URL")
+if not _database_url:
+    raise RuntimeError("DATABASE_URL environment variable is not set")
+
 engine = create_async_engine(
-    url = os.getenv("DATABASE_URL"),
-    echo=True
+    url=_database_url,
+    echo=os.getenv("SQL_DEBUG", "").lower() in ("1", "true", "yes"),
 )
 
 

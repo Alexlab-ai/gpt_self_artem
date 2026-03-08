@@ -1,4 +1,37 @@
-from .shared import *
+from typing import Optional
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.fsm.context import FSMContext
+from bot.backend import (
+    BACKEND_CLIENT,
+    TOKEN_STORE,
+    get_or_fetch_token,
+    get_current_step_question,
+    process_step_message,
+)
+from bot.config import (
+    format_step_progress_indicator,
+    build_exit_markup,
+    build_main_menu_markup,
+    build_error_markup,
+    build_steps_navigation_markup,
+    build_steps_list_markup,
+    build_step_questions_markup,
+    build_step_actions_markup,
+    build_step_answer_mode_markup,
+    build_template_selection_markup,
+    build_template_filling_markup,
+    build_steps_settings_markup,
+    build_template_selection_settings_markup,
+    build_progress_step_markup,
+    build_progress_main_markup,
+    build_progress_view_answers_steps_markup,
+    build_progress_view_answers_questions_markup,
+    build_settings_steps_list_markup,
+    build_settings_questions_list_markup,
+    build_settings_select_step_for_question_markup,
+)
+from bot.utils import send_long_message, edit_long_message
+from .shared import StepState, MAIN_MENU_TEXT, logger
 
 async def handle_steps(message: Message, state: FSMContext) -> None:
     telegram_id = message.from_user.id

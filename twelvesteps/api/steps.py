@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, Union
 
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -46,16 +46,18 @@ class StepFlowService:
         last_step = result_total.scalars().first()
         total_steps = last_step.index if last_step else 12
 
-        stmt_answered = select(StepAnswer).where(
+        stmt_answered = select(func.count()).select_from(StepAnswer).where(
             StepAnswer.user_id == user_id,
             StepAnswer.step_id == current_user_step.step_id
         )
         result_answered = await self.session.execute(stmt_answered)
-        answered_count = len(result_answered.scalars().all())
+        answered_count = result_answered.scalar() or 0
 
-        stmt_questions = select(Question).where(Question.step_id == current_user_step.step_id)
+        stmt_questions = select(func.count()).select_from(Question).where(
+            Question.step_id == current_user_step.step_id
+        )
         result_questions = await self.session.execute(stmt_questions)
-        total_questions = len(result_questions.scalars().all())
+        total_questions = result_questions.scalar() or 0
 
         return {
             "step_id": step.id,

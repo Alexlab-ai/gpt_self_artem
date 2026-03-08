@@ -1,4 +1,17 @@
-from .shared import *
+import asyncio
+from aiogram.types import Message, CallbackQuery
+from aiogram.fsm.context import FSMContext
+from aiogram.exceptions import TelegramBadRequest
+from bot.backend import BACKEND_CLIENT, get_or_fetch_token, get_current_step_question
+from bot.config import (
+    build_sos_help_type_markup,
+    build_sos_exit_markup,
+    build_step_actions_markup,
+    build_main_menu_markup,
+    format_step_progress_indicator,
+)
+from bot.utils import send_long_message, edit_long_message
+from .shared import StepState, SosStates, MAIN_MENU_TEXT, logger
 
 async def handle_sos(message: Message, state: FSMContext) -> None:
     telegram_id = message.from_user.id

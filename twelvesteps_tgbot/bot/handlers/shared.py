@@ -122,8 +122,6 @@ class AboutMeStates(StatesGroup):
     adding_entry = State()
 
 
-MAIN_MENU_TEXT = "⁠"
-
 def _clean_section_title(name: str, icon: str = "") -> str:
     import re
     raw_name = (name or "").strip()

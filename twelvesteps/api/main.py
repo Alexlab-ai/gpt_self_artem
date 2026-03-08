@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from dotenv import load_dotenv
 import traceback
 
-from api.dependencies import CurrentUserContext, get_current_user, get_db, get_db_session
+from api.dependencies import CurrentUserContext, get_current_user, get_db_session
 from api.schemas import (
     AnswerRequest,
     ChatRequest,
@@ -140,28 +140,6 @@ def build_user_schema(user) -> UserSchema:
         created_at=user.created_at,
         updated_at=user.updated_at
     )
-
-@app.post("/auth/telegram", response_model=TelegramAuthResponse)
-async def auth_telegram_endpoint(
-    payload: TelegramAuthRequest,
-    session: AsyncSession = Depends(get_db)
-) -> TelegramAuthResponse:
-    try:
-        service = UserService(session)
-        user, is_new = await service.authenticate_telegram(
-            telegram_id=payload.telegram_id,
-            username=payload.username,
-            first_name=payload.first_name
-        )
-
-        return TelegramAuthResponse(
-            user=build_user_schema(user),
-            is_new=is_new,
-            access_token=user.api_key
-        )
-    except Exception as exc:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(exc))
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_endpoint(payload: ChatRequest) -> ChatResponse:

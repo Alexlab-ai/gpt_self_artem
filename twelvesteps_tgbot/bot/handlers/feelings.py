@@ -1,4 +1,14 @@
-from .shared import *
+from aiogram.types import Message, CallbackQuery
+from aiogram.fsm.context import FSMContext
+from bot.config import (
+    build_all_feelings_markup,
+    build_feelings_category_markup,
+    build_fears_markup,
+    build_main_menu_markup,
+    FEELINGS_CATEGORIES,
+    FEARS_LIST,
+)
+from .shared import MAIN_MENU_TEXT
 
 async def handle_feelings(message: Message, state: FSMContext) -> None:
     """Handle Feelings button - show feelings categories menu"""

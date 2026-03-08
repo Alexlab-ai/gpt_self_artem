@@ -1,4 +1,8 @@
-from .shared import *
+from aiogram.types import Message, CallbackQuery
+from aiogram.fsm.context import FSMContext
+from bot.config import build_faq_menu_markup, build_faq_section_markup, build_main_menu_markup, FAQ_SECTIONS
+from bot.utils import edit_long_message
+from .shared import MAIN_MENU_TEXT
 
 async def handle_faq(message: Message, state: FSMContext) -> None:
     """Handle FAQ command - show instructions menu"""
