@@ -896,7 +896,8 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
             try:
                 result = await BACKEND_CLIENT.delete_section(token, section_id)
                 logger.info(f"Delete section {section_id} result: {result}")
-                await _render_profile_info_menu(callback, token, source="profile")
+                # Отправляем новым сообщением — edit вызовет "message not modified" если список не изменился
+                await _render_profile_info_menu(callback, token, source="profile", send_new=True)
             except Exception as e:
                 logger.exception(f"Error deleting section {section_id}: {e}")
                 err_text = str(e)
@@ -907,7 +908,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                         "Разделы созданные до обновления бота привязаны к старым данным. "
                         "Создай новый раздел — он удалится без проблем.",
                         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                            [InlineKeyboardButton(text="◀️ Назад", callback_data=f"profile_info_section_{section_id}")]
+                            [InlineKeyboardButton(text="◀️ К разделам", callback_data="profile_my_info")]
                         ])
                     )
                 else:
@@ -915,7 +916,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                         callback,
                         f"❌ Ошибка при удалении раздела.\n\nПопробуй позже.",
                         reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                            [InlineKeyboardButton(text="◀️ Назад", callback_data=f"profile_info_section_{section_id}")]
+                            [InlineKeyboardButton(text="◀️ К разделам", callback_data="profile_my_info")]
                         ])
                     )
 
