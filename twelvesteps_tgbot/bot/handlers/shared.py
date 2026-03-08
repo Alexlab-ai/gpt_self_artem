@@ -125,9 +125,14 @@ class AboutMeStates(StatesGroup):
 def _clean_section_title(name: str, icon: str = "") -> str:
     import re
     raw_name = (name or "").strip()
-    cleaned_name = re.sub(r'^[^\wА-Яа-яЁё0-9]+\s*', '', raw_name).strip()
+    # Убираем эмодзи и спецсимволы только с начала строки, без жадного \s*
+    cleaned_name = re.sub(r'^[\U00010000-\U0010ffff\u2600-\u27FF\uFE00-\uFE0F\u20D0-\u20FF]+\s*', '', raw_name).strip()
+    if not cleaned_name:
+        cleaned_name = raw_name.strip()
+    # Нормализуем icon
     cleaned_icon = re.sub(r'[\uFE0F\u20E3]', '', (icon or '').strip())
-    if cleaned_name and cleaned_name[0] == cleaned_icon:
+    # Если имя уже начинается с этого icon — не дублируем
+    if cleaned_icon and cleaned_name.startswith(cleaned_icon):
         return cleaned_name
     return f"{cleaned_icon} {cleaned_name}".strip() if cleaned_icon else (cleaned_name or raw_name or "Раздел")
 
@@ -142,4 +147,3 @@ def _section_nav_callback(section_id: int, source: str) -> str:
 
 def _section_back_callback(source: str) -> str:
     return "profile_back_to_settings" if source == "settings" else "profile_my_info"
-
