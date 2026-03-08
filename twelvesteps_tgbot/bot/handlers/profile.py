@@ -227,35 +227,13 @@ async def _render_profile_info_section(callback: CallbackQuery, token: str, sect
     )
 
 async def handle_profile(message: Message, state: FSMContext) -> None:
-    """Handle /profile command - show all profile sections"""
-    telegram_id = message.from_user.id
-    username = message.from_user.username
-    first_name = message.from_user.first_name
-
-    try:
-        token = await get_or_fetch_token(telegram_id, username, first_name)
-        if not token:
-            await message.answer("Сначала нажми /start для авторизации.")
-            return
-
-        sections_data = await BACKEND_CLIENT.get_profile_sections(token)
-        sections = sections_data.get("sections", [])
-
-        if not sections:
-            await message.answer("Разделы профиля пока не настроены.")
-            return
-
-        markup = build_profile_sections_markup(sections)
-        await send_long_message(
-            message,
-            "📋 Выбери раздел, о котором хочешь рассказать:",
-            reply_markup=markup
-        )
-        await state.set_state(ProfileStates.section_selection)
-
-    except Exception as exc:
-        logger.exception("Error handling /profile for %s: %s", telegram_id, exc)
-        await message.answer("Ошибка при загрузке разделов. Попробуй позже.")
+    """Handle /profile command - show profile settings menu"""
+    await state.clear()
+    from bot.config import build_profile_settings_markup
+    await message.answer(
+        "🪪 Мой профиль\n\nВыбери раздел:",
+        reply_markup=build_profile_settings_markup()
+    )
 
 async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) -> None:
     """Handle callback queries for profile actions"""
@@ -597,7 +575,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                             from datetime import datetime
                             dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
                             date_str = dt.strftime("%d.%m.%Y %H:%M")
-                        except:
+                        except (ValueError, AttributeError):
                             pass
 
                     history_text += f"📝 Запись {i+1}"
@@ -777,7 +755,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
                     from datetime import datetime
                     dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
                     date_str = dt.strftime("%d.%m.%Y %H:%M")
-                except:
+                except (ValueError, AttributeError):
                     pass
 
             entry_text = f"📝 Запись\n\n"
@@ -1373,13 +1351,34 @@ async def handle_profile_custom_section(message: Message, state: FSMContext) -> 
         result = await BACKEND_CLIENT.create_custom_section(token, section_name, icon)
         section_id = result.get("section_id")
 
+        # Показываем меню профиля с добавленным разделом
+        sections_data = await BACKEND_CLIENT.get_profile_sections(token)
+        sections = sections_data.get("sections", []) if sections_data else []
+
+        buttons = []
+        for section in sections:
+            sid = section.get("id")
+            if not sid or sid == 14:
+                continue
+            name = section.get("name", "Раздел")
+            icon_s = section.get("icon", "")
+            title = _clean_section_title(name, icon_s)
+            buttons.append([
+                InlineKeyboardButton(
+                    text=title[:64],
+                    callback_data=f"profile_info_section_{sid}"
+                )
+            ])
+
+        buttons.append([InlineKeyboardButton(text="➕ Добавить раздел", callback_data="profile_custom_section")])
+        buttons.append([InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")])
+
         await message.answer(
-            f"✅ Раздел '{section_name}' создан! Теперь можешь добавить в него вопросы через /profile",
-            reply_markup=build_main_menu_markup()
+            f"✅ Раздел '{section_name}' создан!\n\n📋 Информация обо мне\n\nВыбери раздел.",
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
         )
         await state.clear()
 
     except Exception as exc:
         logger.exception("Error creating custom section for %s: %s", telegram_id, exc)
         await message.answer("Ошибка при создании раздела. Попробуй позже.")
-
