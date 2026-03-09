@@ -62,12 +62,22 @@ async def _mini_survey_header(token: str) -> str:
 from .shared import _clean_section_title, _entry_preview_text, _section_nav_callback, _section_back_callback
 from .about_me import find_first_unanswered_question
 
+def _profile_info_menu_callback(source: str) -> str:
+    """Back target from a specific info section/history to the 'Информация обо мне' list."""
+    return "profile_settings_info" if source == "settings" else "profile_my_info"
+
+
+def _profile_menu_callback(source: str) -> str:
+    """Back target from the 'Информация обо мне' list to the parent profile menu."""
+    return "profile_back_to_settings" if source == "settings" else "profile_back"
+
+
 async def _render_profile_info_menu(callback: CallbackQuery, token: str, source: str = "settings", send_new: bool = False) -> None:
     sections_data = await BACKEND_CLIENT.get_profile_sections(token)
     sections = sections_data.get("sections", []) if sections_data else []
 
     markup_back = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="◀️", callback_data=_section_back_callback(source))]
+        [InlineKeyboardButton(text="◀️", callback_data=_profile_menu_callback(source))]
     ])
 
     if not sections:
@@ -94,7 +104,7 @@ async def _render_profile_info_menu(callback: CallbackQuery, token: str, source:
         ])
 
     buttons.append([InlineKeyboardButton(text="➕ Добавить раздел", callback_data="profile_custom_section")])
-    buttons.append([InlineKeyboardButton(text="◀️", callback_data=_section_back_callback(source))])
+    buttons.append([InlineKeyboardButton(text="◀️", callback_data=_profile_menu_callback(source))])
 
     text = "📋 Информация обо мне\n\nВыбери раздел."
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -109,7 +119,7 @@ async def _render_profile_info_menu(callback: CallbackQuery, token: str, source:
 def _build_profile_info_section_markup(section_id: int, entries: list[dict], source: str = "settings", is_custom: bool = False) -> InlineKeyboardMarkup:
     history_cb = f"profile_history_settings_{section_id}" if source == "settings" else f"profile_history_{section_id}"
     add_cb = f"profile_add_entry_settings_{section_id}" if source == "settings" else f"profile_add_entry_{section_id}"
-    back_cb = _section_back_callback(source)
+    back_cb = _profile_info_menu_callback(source)
     buttons = [
         [
             InlineKeyboardButton(text="🗃️ История", callback_data=history_cb),
@@ -214,7 +224,7 @@ async def _render_profile_info_section(callback: CallbackQuery, token: str, sect
             callback,
             "❌ Раздел не найден.",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="◀️", callback_data=_section_back_callback(source))]
+                [InlineKeyboardButton(text="◀️", callback_data=_profile_info_menu_callback(source))]
             ])
         )
         return
