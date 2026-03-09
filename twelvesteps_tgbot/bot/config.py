@@ -432,10 +432,9 @@ def build_settings_select_step_for_question_markup(steps: list[dict]) -> InlineK
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def format_step_progress_indicator(step_number, total_steps, step_title=None, answered_questions=None, total_questions=None) -> str:
-    title = step_title or f"Шаг {step_number}"
-    header = f"🪜 Шаг {step_number} — {title}"
+    header = f"Шаг {step_number} из {total_steps}"
     if answered_questions is not None and total_questions and total_questions > 0:
-        header += f"\n📋 Вопрос {answered_questions + 1} из {total_questions}"
+        header += f"  ·  Вопрос {answered_questions + 1} из {total_questions}"
     return header
 
 

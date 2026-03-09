@@ -108,10 +108,10 @@ async def handle_steps(message: Message, state: FSMContext) -> None:
                     except Exception as e:
                         logger.warning(f"Failed to check template progress: {e}")
 
-                    full_text = f"{progress_indicator}\n\n❔{response_text}"
+                    full_text = f"{progress_indicator}\n\n{response_text}"
 
                     if template_progress:
-                        full_text = f"{progress_indicator}\n\n⏸ Есть сохранённый прогресс по шаблону\n📊 {template_progress.get('progress_summary', '')}\n\n❔{response_text}"
+                        full_text = f"{progress_indicator}\n\nЕсть сохранённый прогресс · {template_progress.get('progress_summary', '')}\n\n{response_text}"
 
 
                     await state.update_data(
@@ -292,9 +292,9 @@ async def handle_step_answer_mode(message: Message, state: FSMContext) -> None:
                     answered_questions=step_info.get("answered_questions", 0),
                     total_questions=step_info.get("total_questions", 0)
                 )
-                full_response = f"{progress_indicator}\n\n✅ Ответ обновлён!\n\n❔{response_text}"
+                full_response = f"{progress_indicator}\n\n✅ Ответ обновлён!\n\n{response_text}"
             else:
-                full_response = f"✅ Ответ обновлён!\n\n❔{response_text}"
+                full_response = f"✅ Ответ обновлён!\n\n{response_text}"
 
             await send_long_message(message, full_response, reply_markup=build_step_actions_markup())
             await state.update_data(action=None, current_question_id=None)
@@ -342,9 +342,9 @@ async def handle_step_answer_mode(message: Message, state: FSMContext) -> None:
                     answered_questions=step_info.get("answered_questions", 0),
                     total_questions=step_info.get("total_questions", 0)
                 )
-                full_response = f"{progress_indicator}\n\n✅ Ответ завершён и сохранён!\n\n❔{response_text}"
+                full_response = f"{progress_indicator}\n\n✅ Ответ завершён и сохранён!\n\n{response_text}"
             else:
-                full_response = f"✅ Ответ завершён и сохранён!\n\n❔{response_text}"
+                full_response = f"✅ Ответ завершён и сохранён!\n\n{response_text}"
 
             state_data = await state.get_data()
             if state_data.get("action") == "complete":
@@ -421,11 +421,11 @@ async def handle_step_answer(message: Message, state: FSMContext) -> None:
                 answered_questions=step_info.get("answered_questions", 0),
                 total_questions=step_info.get("total_questions", 0)
             )
-            full_response = f"{progress_indicator}\n\n✅ Ответ сохранён!\n\n❔{response_text}"
+            full_response = f"{progress_indicator}\n\n✅ Ответ сохранён!\n\n{response_text}"
 
             await state.update_data(step_description=step_info.get("step_description", ""))
         else:
-            full_response = f"✅ Ответ сохранён!\n\n❔{response_text}"
+            full_response = f"✅ Ответ сохранён!\n\n{response_text}"
 
         await send_long_message(message, full_response, reply_markup=build_step_actions_markup())
 
@@ -914,14 +914,14 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                     if draft_text:
                         full_text = (
                             f"{progress_indicator}\n\n"
-                            f"❔{response_text}\n\n"
+                            f"{response_text}\n\n"
                             f"📝 Поле для ответа:\n"
                             f"💾 Черновик: {draft_text[:100]}{'...' if len(draft_text) > 100 else ''}"
                         )
                     else:
                         full_text = (
                             f"{progress_indicator}\n\n"
-                            f"❔{response_text}\n\n"
+                            f"{response_text}\n\n"
                             f"📝 Поле для ответа:\n"
                             f"[Введи свой ответ здесь]"
                         )
@@ -958,7 +958,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                         answered_questions=step_info.get("answered_questions", 0),
                         total_questions=step_info.get("total_questions", 0)
                     )
-                    full_text = f"{progress_indicator}\n\n❔{response_text}"
+                    full_text = f"{progress_indicator}\n\n{response_text}"
 
                     await state.update_data(
                         step_description=step_info.get("step_description", ""),
@@ -996,7 +996,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             draft_text = f"{progress_indicator}\n\n" if progress_indicator else ""
             draft_text += "💾 Сохранить черновик\n\n"
             if current_question_text:
-                draft_text += f"❔{current_question_text}\n\n"
+                draft_text += f"{current_question_text}\n\n"
 
             if existing_draft:
                 draft_text += f"📝 Текущий черновик:\n{existing_draft[:200]}{'...' if len(existing_draft) > 200 else ''}\n\n"
@@ -1065,7 +1065,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                 try:
                     await callback.message.edit_text(
                         f"{progress_indicator}\n\n"
-                        f"❔{question_text}\n\n"
+                        f"{question_text}\n\n"
                         f"✏️ Редактировать последний ответ:\n\n"
                         f"Предыдущий ответ:\n{prev_answer}\n\n"
                         f"Введи новый ответ:",
@@ -1081,7 +1081,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                         try:
                             await callback.message.edit_text(
                                 f"{progress_indicator}\n\n"
-                                f"❔{question_text}\n\n"
+                                f"{question_text}\n\n"
                                 f"✏️ Редактировать последний ответ:\n\n"
                                 f"Предыдущий ответ:\n{prev_answer}\n\n"
                                 f"Введи новый ответ:",
@@ -1092,7 +1092,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                             logger.error(f"Failed to edit message even without parse_mode: {e2}")
                             await callback.message.answer(
                                 f"{progress_indicator}\n\n"
-                                f"❔{question_text}\n\n"
+                                f"{question_text}\n\n"
                                 f"✏️ Редактировать последний ответ:\n\n"
                                 f"Предыдущий ответ:\n{prev_answer}\n\n"
                                 f"Введи новый ответ:",
@@ -1147,7 +1147,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             draft_text = f"{progress_indicator}\n\n" if progress_indicator else ""
             draft_text += "📝 Просмотр черновика\n\n"
             if current_question_text:
-                draft_text += f"❔{current_question_text}\n\n"
+                draft_text += f"{current_question_text}\n\n"
             draft_text += f"💾 Текущий черновик:\n{existing_draft}\n\n"
             draft_text += "Введи новый текст для обновления черновика или отправь текущий для сохранения:"
 
@@ -1176,7 +1176,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                     )
                     full_text = (
                         f"{progress_indicator}\n\n"
-                        f"❔{response_text}\n\n"
+                        f"{response_text}\n\n"
                         f"📝 Поле для ответа:\n"
                         f"[Поле очищено]"
                     )
@@ -1205,7 +1205,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             complete_text = f"{progress_indicator}\n\n" if progress_indicator else ""
             complete_text += "✔️ Завершить и перейти\n\n"
             if current_question_text:
-                complete_text += f"❔{current_question_text}\n\n"
+                complete_text += f"{current_question_text}\n\n"
             complete_text += "Введи финальный ответ и отправь его. После этого ответ будет сохранён и ты перейдёшь к следующему вопросу:"
 
             complete_markup = InlineKeyboardMarkup(inline_keyboard=[
@@ -1627,7 +1627,7 @@ async def handle_steps_navigation_callback(callback: CallbackQuery, state: FSMCo
                             nav_level="question",
                         )
 
-                    full_text = f"{progress_indicator}\n\n❔{response_text}" if progress_indicator else response_text
+                    full_text = f"{progress_indicator}\n\n{response_text}" if progress_indicator else response_text
                     await callback.answer()
                     await edit_long_message(
                         callback,
@@ -1661,7 +1661,7 @@ async def handle_steps_navigation_callback(callback: CallbackQuery, state: FSMCo
                         total_questions=total_q
                     )
                     question_text = step_data.get("message", "")
-                    full_text = f"{header}\n\n❔ {question_text}"
+                    full_text = f"{header}\n\n {question_text}"
 
                     await state.update_data(step_description=step_info.get("step_description", ""))
                     await edit_long_message(callback, full_text, reply_markup=build_step_actions_markup())
@@ -1756,7 +1756,7 @@ async def handle_step_selection_callback(callback: CallbackQuery, state: FSMCont
                 total_questions=step_info.get("total_questions", 0)
             )
 
-            full_text = f"{progress_indicator}\n\n❔{response_text}"
+            full_text = f"{progress_indicator}\n\n{response_text}"
 
             await state.update_data(step_description=step_description, nav_level="question")
 
@@ -2075,7 +2075,7 @@ async def handle_question_select_callback(callback: CallbackQuery, state: FSMCon
                 total_questions=step_info.get("total_questions", 0),
             ) if step_info else ""
 
-            full_text = f"{progress_indicator}\n\n❔{response_text}" if progress_indicator else response_text
+            full_text = f"{progress_indicator}\n\n{response_text}" if progress_indicator else response_text
 
             await state.update_data(
                 step_description=step_info.get("step_description", "") if step_info else "",

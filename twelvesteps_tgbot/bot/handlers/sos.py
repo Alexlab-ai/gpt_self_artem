@@ -70,7 +70,7 @@ async def handle_sos_callback(callback: CallbackQuery, state: FSMContext) -> Non
                                 answered_questions=step_info.get("answered_questions", 0),
                                 total_questions=step_info.get("total_questions", 0)
                             )
-                            full_text = f"{progress_indicator}\n\n❔{response_text}"
+                            full_text = f"{progress_indicator}\n\n{response_text}"
                             await edit_long_message(
                                 callback,
                                 full_text,
