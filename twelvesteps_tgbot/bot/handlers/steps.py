@@ -15,7 +15,6 @@ from bot.config import (
     build_main_menu_markup,
     build_error_markup,
     build_root_menu_markup,
-    build_steps_navigation_markup,
     build_steps_list_markup,
     build_step_questions_markup,
     build_step_actions_markup,
@@ -134,7 +133,7 @@ async def handle_steps(message: Message, state: FSMContext) -> None:
                     await send_long_message(
                         message,
                         full_text,
-                        reply_markup=build_steps_navigation_markup()
+                        reply_markup=build_step_actions_markup()
                     )
             else:
                 step_description = step_info.get("step_description", "")
@@ -145,7 +144,7 @@ async def handle_steps(message: Message, state: FSMContext) -> None:
                 await send_long_message(
                     message,
                     full_text,
-                    reply_markup=build_steps_navigation_markup()
+                    reply_markup=build_step_actions_markup()
                 )
         else:
             step_data = await get_current_step_question(
@@ -483,7 +482,7 @@ async def handle_about_step(message: Message, state: FSMContext) -> None:
         await send_long_message(
             message,
             about_text,
-            reply_markup=build_steps_navigation_markup()
+            reply_markup=build_step_actions_markup()
         )
 
     except Exception as exc:
@@ -1221,29 +1220,33 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             return
 
         if data == "step_show_description":
-            state_data = await state.get_data()
-            step_description = state_data.get("step_description", "")
-
-            if not step_description:
+            try:
+                token = await get_or_fetch_token(telegram_id, username, first_name)
                 step_info = await BACKEND_CLIENT.get_current_step_info(token)
-                step_description = step_info.get("step_description", "") if step_info else ""
-                if step_description:
-                    await state.update_data(step_description=step_description)
+                description = ""
+                if step_info:
+                    description = (
+                        step_info.get("step_description") or
+                        step_info.get("description") or
+                        ""
+                    )
+                logger.info(f"step_show_description: keys={list(step_info.keys()) if step_info else None}, desc_len={len(description)}")
 
-            if not step_description:
-                await callback.answer("Описание пока не добавлено")
-                return
+                if not description:
+                    await callback.answer("Описание пока не загружено", show_alert=True)
+                    return
 
-            back_markup = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="◀️ Назад", callback_data="step_continue")]
-            ])
-
-            await edit_long_message(
-                callback,
-                f"📖 О шаге\n\n{step_description}",
-                reply_markup=back_markup,
-            )
-            await callback.answer()
+                await edit_long_message(
+                    callback,
+                    f"📖 О шаге\n\n{description}",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                        [InlineKeyboardButton(text="◀️ Назад", callback_data="step_continue")]
+                    ])
+                )
+                await callback.answer()
+            except Exception as e:
+                logger.exception(f"step_show_description error: {e}")
+                await callback.answer(f"Ошибка: {e}", show_alert=True)
             return
 
         elif data == "step_progress":
@@ -1642,58 +1645,34 @@ async def handle_steps_navigation_callback(callback: CallbackQuery, state: FSMCo
             return
 
         if data == "steps_back":
-            state_data = await state.get_data()
-            nav_level = state_data.get("nav_level", "question")
-
-            if nav_level == "question":
-                # Из вопроса → экран шага (заголовок + навигация шага)
+            try:
+                token = await get_or_fetch_token(telegram_id, username, first_name)
                 step_info = await BACKEND_CLIENT.get_current_step_info(token)
-                if step_info and step_info.get("step_number"):
+                step_data = await get_current_step_question(telegram_id, username, first_name)
+
+                if step_data and step_info:
                     step_number = step_info.get("step_number")
                     step_title = step_info.get("step_title", "")
-                    header = f"🪜 Шаг {step_number} — {step_title}" if step_title else f"🪜 Шаг {step_number}"
-                    await state.update_data(nav_level="step")
-                    try:
-                        await callback.message.edit_text(
-                            header,
-                            reply_markup=build_steps_navigation_markup(),
-                        )
-                    except TelegramBadRequest:
-                        await callback.message.answer(header, reply_markup=build_steps_navigation_markup())
+                    answered = step_info.get("answered_questions", 0)
+                    total_q = step_info.get("total_questions", 0)
+
+                    header = format_step_progress_indicator(
+                        step_number=step_number,
+                        total_steps=12,
+                        step_title=step_title,
+                        answered_questions=answered,
+                        total_questions=total_q
+                    )
+                    question_text = step_data.get("message", "")
+                    full_text = f"{header}\n\n❔ {question_text}"
+
+                    await state.update_data(step_description=step_info.get("step_description", ""))
+                    await edit_long_message(callback, full_text, reply_markup=build_step_actions_markup())
+                    await state.set_state(StepState.answering)
                 else:
-                    await state.update_data(nav_level="step")
-                    try:
-                        await callback.message.edit_text(
-                            "🪜 Работа по шагу",
-                            reply_markup=build_steps_navigation_markup(),
-                        )
-                    except TelegramBadRequest:
-                        await callback.message.answer("🪜 Работа по шагу", reply_markup=build_steps_navigation_markup())
-
-            elif nav_level == "step":
-                # Из экрана шага → список шагов
-                steps_data = await BACKEND_CLIENT.get_steps_list(token)
-                steps = steps_data.get("steps", []) if steps_data else []
-                await state.update_data(nav_level="list")
-                try:
-                    await callback.message.edit_text(
-                        "🔢 Выбери шаг для работы:",
-                        reply_markup=build_steps_list_markup(steps),
-                    )
-                except TelegramBadRequest:
-                    await callback.message.answer("🔢 Выбери шаг для работы:", reply_markup=build_steps_list_markup(steps))
-
-            else:
-                # Из списка шагов → главное меню "Работа по шагу"
-                await state.update_data(nav_level="step")
-                try:
-                    await callback.message.edit_text(
-                        "🪜 Работа по шагу",
-                        reply_markup=build_steps_navigation_markup(),
-                    )
-                except TelegramBadRequest:
-                    await callback.message.answer("🪜 Работа по шагу", reply_markup=build_steps_navigation_markup())
-
+                    await edit_long_message(callback, "Выбери раздел:", reply_markup=build_root_menu_markup())
+            except Exception as e:
+                logger.exception(f"steps_back error: {e}")
             await callback.answer()
             return
 
