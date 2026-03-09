@@ -126,16 +126,6 @@ def _build_profile_info_section_markup(section_id: int, entries: list[dict], sou
             InlineKeyboardButton(text="➕ Добавить", callback_data=add_cb),
         ]
     ]
-    for idx, entry in enumerate(entries[:5], 1):
-        entry_id = entry.get("id")
-        if not entry_id:
-            continue
-        preview = _entry_preview_text(entry.get("content", ""), limit=48) or "Запись"
-        if source == "settings":
-            cb = f"profile_entry_settings_{entry_id}_{section_id}"
-        else:
-            cb = f"profile_entry_{entry_id}"
-        buttons.append([InlineKeyboardButton(text=f"📝 {idx}. {preview}"[:64], callback_data=cb)])
     if is_custom:
         buttons.append([InlineKeyboardButton(text="🗑 Удалить раздел", callback_data=f"profile_delete_section_{source}_{section_id}")])
     buttons.append([
@@ -235,7 +225,10 @@ async def _render_profile_info_section(callback: CallbackQuery, token: str, sect
     history_data = await BACKEND_CLIENT.get_section_history(token, section_id)
     entries = history_data.get("entries", []) if history_data else []
     text = f"{title}\n\n"
-    text += "Выбери действие или открой запись ниже." if entries else "Пока не заполнено. Добавь первую запись или открой историю."
+    if entries:
+        text += f"Записей: {len(entries)}. Открой историю или добавь новую."
+    else:
+        text += "Пока не заполнено. Добавь первую запись!"
     await edit_long_message(
         callback,
         text,
