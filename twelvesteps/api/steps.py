@@ -12,7 +12,7 @@ from db.models import (
 import json
 
 class StepFlowService:
-    MIN_ANSWER_LENGTH = 50
+    MIN_ANSWER_LENGTH = 5
 
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -378,13 +378,13 @@ class StepFlowService:
                                         total_length += len(v)
 
                 if total_length < self.MIN_ANSWER_LENGTH:
-                    return False, f"⚠️ Ответ слишком короткий ({total_length} символов). Минимум: {self.MIN_ANSWER_LENGTH} символов. Пожалуйста, раскрой ответ подробнее."
+                    return False, f"⚠️ Слишком короткий ответ. Минимум {self.MIN_ANSWER_LENGTH} символов."
             except json.JSONDecodeError:
                 if len(answer_text.strip()) < self.MIN_ANSWER_LENGTH:
-                    return False, f"⚠️ Ответ слишком короткий ({len(answer_text.strip())} символов). Минимум: {self.MIN_ANSWER_LENGTH} символов. Пожалуйста, раскрой ответ подробнее."
+                    return False, f"⚠️ Слишком короткий ответ. Минимум {self.MIN_ANSWER_LENGTH} символов."
         else:
             if len(answer_text.strip()) < self.MIN_ANSWER_LENGTH:
-                return False, f"⚠️ Ответ слишком короткий ({len(answer_text.strip())} символов). Минимум: {self.MIN_ANSWER_LENGTH} символов.\n\nРаскрой ответ подробнее - это поможет глубже проработать вопрос."
+                return False, f"⚠️ Слишком короткий ответ. Минимум {self.MIN_ANSWER_LENGTH} символов."
 
         return True, ""
 

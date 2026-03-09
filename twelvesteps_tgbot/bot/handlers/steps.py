@@ -398,11 +398,7 @@ async def handle_step_answer(message: Message, state: FSMContext) -> None:
         if step_next.get("error"):
             error_message = step_next.get("message", "Ошибка валидации")
             await message.answer(
-                f"{error_message}\n\n"
-                "💡 Ты можешь:\n"
-                "• Дополнить ответ и отправить снова\n"
-                "• Нажать «⏸ Пауза» чтобы сохранить черновик\n"
-                "• Нажать «🔀 Вопрос» чтобы перейти к другому вопросу",
+                error_message,
                 reply_markup=build_step_actions_markup()
             )
             return
