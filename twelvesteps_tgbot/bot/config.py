@@ -291,16 +291,69 @@ def build_steps_list_markup(steps: list[dict]) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 def build_step_questions_markup(questions: list[dict], step_id: int) -> InlineKeyboardMarkup:
-    """Markup for listing questions in a step."""
+    """Markup for listing questions in a step with grouping for large sets."""
+    GROUP_SIZE = 15
+    total = len(questions)
     buttons = []
-    for i, q in enumerate(questions, 1):
-        question_text = q.get("text", "")[:40] + "..." if len(q.get("text", "")) > 40 else q.get("text", "")
-        buttons.append([InlineKeyboardButton(
-            text=f"{i}. {question_text}",
-            callback_data=f"question_view_{q['id']}"
-        )])
 
-    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="steps_back")])
+    if total <= GROUP_SIZE:
+        for i in range(0, total, 3):
+            row = []
+            for j in range(3):
+                if i + j < total:
+                    q = questions[i + j]
+                    answered = q.get("is_answered", False)
+                    icon = "✅" if answered else "⬜"
+                    row.append(InlineKeyboardButton(
+                        text=f"{icon}{i+j+1}",
+                        callback_data=f"question_select_{q['id']}"
+                    ))
+            if row:
+                buttons.append(row)
+    else:
+        num_groups = (total + GROUP_SIZE - 1) // GROUP_SIZE
+        for g in range(num_groups):
+            start = g * GROUP_SIZE + 1
+            end = min((g + 1) * GROUP_SIZE, total)
+            answered_in_group = sum(
+                1 for q in questions[g*GROUP_SIZE:(g+1)*GROUP_SIZE]
+                if q.get("is_answered", False)
+            )
+            buttons.append([InlineKeyboardButton(
+                text=f"📦 Вопросы {start}–{end}  ({answered_in_group}/{end-start+1} ✅)",
+                callback_data=f"questions_group_{step_id}_{g}"
+            )])
+
+    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="step_progress")])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def build_questions_group_markup(questions: list[dict], step_id: int, group_index: int) -> InlineKeyboardMarkup:
+    """Markup for a specific group of questions."""
+    GROUP_SIZE = 15
+    start = group_index * GROUP_SIZE
+    group_questions = questions[start:start + GROUP_SIZE]
+    buttons = []
+
+    for i in range(0, len(group_questions), 3):
+        row = []
+        for j in range(3):
+            if i + j < len(group_questions):
+                q = group_questions[i + j]
+                answered = q.get("is_answered", False)
+                icon = "✅" if answered else "⬜"
+                num = start + i + j + 1
+                row.append(InlineKeyboardButton(
+                    text=f"{icon}{num}",
+                    callback_data=f"question_select_{q['id']}"
+                ))
+        if row:
+            buttons.append(row)
+
+    buttons.append([InlineKeyboardButton(
+        text="◀️ Назад к группам",
+        callback_data=f"step_questions_list_{step_id}"
+    )])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
@@ -386,7 +439,7 @@ def format_step_progress_indicator(step_number, total_steps, step_title=None, an
     return header
 
 
-def build_step_actions_markup(has_template_progress: bool = False) -> InlineKeyboardMarkup:
+def build_step_actions_markup(**kwargs) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="▶️ Продолжить", callback_data="step_continue"),

@@ -31,6 +31,7 @@ from bot.config import (
     build_settings_steps_list_markup,
     build_settings_questions_list_markup,
     build_settings_select_step_for_question_markup,
+    build_questions_group_markup,
 )
 from bot.utils import send_long_message, edit_long_message
 from .shared import StepState, MAIN_MENU_TEXT, logger
@@ -1230,27 +1231,18 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                     await state.update_data(step_description=step_description)
 
             if not step_description:
-                await callback.answer("Описание шага пока не добавлено")
+                await callback.answer("Описание пока не добавлено")
                 return
 
             back_markup = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="step_continue")]
             ])
 
-            try:
-                await callback.message.edit_text(
-                    f"📖 Описание шага\n\n{step_description}",
-                    reply_markup=back_markup,
-                )
-            except TelegramBadRequest:
-                try:
-                    await callback.message.delete()
-                except Exception:
-                    pass
-                await callback.message.answer(
-                    f"📖 Описание шага\n\n{step_description}",
-                    reply_markup=back_markup,
-                )
+            await edit_long_message(
+                callback,
+                f"📖 О шаге\n\n{step_description}",
+                reply_markup=back_markup,
+            )
             await callback.answer()
             return
 
@@ -1989,3 +1981,129 @@ async def handle_template_field_input(message: Message, state: FSMContext) -> No
         logger.exception("Error handling template field input for %s: %s", telegram_id, exc)
         await message.answer("Произошла ошибка. Попробуй ещё раз.")
         await state.clear()
+
+
+async def handle_questions_group_callback(callback: CallbackQuery, state: FSMContext) -> None:
+    """Handle questions_group_{step_id}_{group_index} callback — show questions within a group."""
+    data = callback.data
+    telegram_id = callback.from_user.id
+    username = callback.from_user.username
+    first_name = callback.from_user.first_name
+
+    try:
+        parts = data.split("_")
+        step_id = int(parts[2])
+        group_index = int(parts[3])
+
+        token = await get_or_fetch_token(telegram_id, username, first_name)
+        if not token:
+            await callback.answer("Ошибка авторизации. Нажми /start.")
+            return
+
+        questions_data = await BACKEND_CLIENT.get_step_questions(token, step_id)
+        questions = questions_data.get("questions", []) if questions_data else []
+
+        if not questions:
+            await callback.answer("Вопросы не найдены")
+            return
+
+        GROUP_SIZE = 15
+        start = group_index * GROUP_SIZE + 1
+        end = min((group_index + 1) * GROUP_SIZE, len(questions))
+
+        try:
+            await callback.message.edit_text(
+                f"📋 Вопросы {start}–{end}",
+                reply_markup=build_questions_group_markup(questions, step_id, group_index),
+            )
+        except TelegramBadRequest as e:
+            if "message is not modified" not in str(e).lower():
+                raise
+        await callback.answer()
+
+    except Exception as exc:
+        logger.exception("Error handling questions group callback for %s: %s", telegram_id, exc)
+        await callback.answer("Ошибка. Попробуй позже.")
+
+
+async def handle_question_select_callback(callback: CallbackQuery, state: FSMContext) -> None:
+    """Handle question_select_{question_id} callback — switch to a specific question."""
+    data = callback.data
+    telegram_id = callback.from_user.id
+    username = callback.from_user.username
+    first_name = callback.from_user.first_name
+
+    try:
+        question_id = int(data.split("_")[-1])
+
+        token = await get_or_fetch_token(telegram_id, username, first_name)
+        if not token:
+            await callback.answer("Ошибка авторизации. Нажми /start.")
+            return
+
+        await BACKEND_CLIENT.switch_to_question(token, question_id)
+
+        step_info = await BACKEND_CLIENT.get_current_step_info(token)
+        step_data = await get_current_step_question(telegram_id, username, first_name)
+
+        if step_data and step_data.get("message"):
+            response_text = step_data["message"]
+            progress_indicator = format_step_progress_indicator(
+                step_number=step_info.get("step_number"),
+                total_steps=step_info.get("total_steps", 12),
+                step_title=step_info.get("step_title"),
+                answered_questions=step_info.get("answered_questions", 0),
+                total_questions=step_info.get("total_questions", 0),
+            ) if step_info else ""
+
+            full_text = f"{progress_indicator}\n\n❔{response_text}" if progress_indicator else response_text
+
+            await state.update_data(
+                step_description=step_info.get("step_description", "") if step_info else "",
+                nav_level="question",
+            )
+            await edit_long_message(callback, full_text, reply_markup=build_step_actions_markup())
+            await state.set_state(StepState.answering)
+            await callback.answer()
+        else:
+            await callback.answer("Ошибка получения вопроса")
+
+    except Exception as exc:
+        logger.exception("Error handling question select callback for %s: %s", telegram_id, exc)
+        await callback.answer("Ошибка. Попробуй позже.")
+
+
+async def handle_step_questions_list_callback(callback: CallbackQuery, state: FSMContext) -> None:
+    """Handle step_questions_list_{step_id} callback — show questions list (back from group)."""
+    data = callback.data
+    telegram_id = callback.from_user.id
+    username = callback.from_user.username
+    first_name = callback.from_user.first_name
+
+    try:
+        step_id = int(data.split("_")[-1])
+
+        token = await get_or_fetch_token(telegram_id, username, first_name)
+        if not token:
+            await callback.answer("Ошибка авторизации. Нажми /start.")
+            return
+
+        questions_data = await BACKEND_CLIENT.get_step_questions(token, step_id)
+        questions = questions_data.get("questions", []) if questions_data else []
+
+        if questions:
+            try:
+                await callback.message.edit_text(
+                    "📋 Вопросы в этом шаге:",
+                    reply_markup=build_step_questions_markup(questions, step_id),
+                )
+            except TelegramBadRequest as e:
+                if "message is not modified" not in str(e).lower():
+                    raise
+            await callback.answer()
+        else:
+            await callback.answer("Вопросы не найдены")
+
+    except Exception as exc:
+        logger.exception("Error handling step questions list callback for %s: %s", telegram_id, exc)
+        await callback.answer("Ошибка. Попробуй позже.")
