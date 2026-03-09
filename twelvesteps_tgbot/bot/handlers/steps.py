@@ -861,8 +861,7 @@ async def handle_steps_settings_callback(callback: CallbackQuery, state: FSMCont
 
         if data == "settings_back":
             await callback.message.edit_text(
-                "⚙️ Настройки\n\n"
-                "Выбери раздел настроек:",
+                "Настройки",
                 reply_markup=build_main_settings_markup()
             )
             await callback.answer()
@@ -1662,7 +1661,7 @@ async def handle_steps_navigation_callback(callback: CallbackQuery, state: FSMCo
                     await edit_long_message(callback, full_text, reply_markup=build_step_actions_markup())
                     await state.set_state(StepState.answering)
                 else:
-                    await edit_long_message(callback, "Выбери раздел:", reply_markup=build_root_menu_markup())
+                    await edit_long_message(callback, "Меню", reply_markup=build_root_menu_markup())
             except Exception as e:
                 logger.exception(f"steps_back error: {e}")
             await callback.answer()
@@ -1671,7 +1670,7 @@ async def handle_steps_navigation_callback(callback: CallbackQuery, state: FSMCo
         if data == "steps_to_main":
             try:
                 await callback.message.edit_text(
-                    "📋 Меню\n\nВыбери раздел:",
+                    "Меню",
                     reply_markup=build_root_menu_markup(),
                 )
             except TelegramBadRequest:
@@ -1679,7 +1678,7 @@ async def handle_steps_navigation_callback(callback: CallbackQuery, state: FSMCo
                     await callback.message.delete()
                 except Exception:
                     pass
-                await callback.message.answer("📋 Меню\n\nВыбери раздел:", reply_markup=build_root_menu_markup())
+                await callback.message.answer("Меню", reply_markup=build_root_menu_markup())
             await state.clear()
             await callback.answer()
             return

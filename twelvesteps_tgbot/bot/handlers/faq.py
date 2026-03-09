@@ -6,7 +6,7 @@ from .shared import MAIN_MENU_TEXT
 
 async def handle_faq(message: Message, state: FSMContext) -> None:
     """Handle FAQ command - show instructions menu"""
-    faq_text = "📎 ИНСТРУКЦИИ — КАК ЭТО РАБОТАЕТ\n\nВыбери раздел для просмотра:"
+    faq_text = "Помощь"
     await message.answer(faq_text, reply_markup=build_faq_menu_markup())
 
 async def handle_faq_callback(callback: CallbackQuery, state: FSMContext) -> None:
@@ -23,7 +23,7 @@ async def handle_faq_callback(callback: CallbackQuery, state: FSMContext) -> Non
         return
 
     if data == "faq_menu":
-        faq_text = "📎 ИНСТРУКЦИИ — КАК ЭТО РАБОТАЕТ\n\nВыбери раздел для просмотра:"
+        faq_text = "Помощь"
         await callback.message.edit_text(faq_text, reply_markup=build_faq_menu_markup())
         await callback.answer()
         return

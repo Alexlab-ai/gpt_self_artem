@@ -171,7 +171,7 @@ async def handle_about_callback(callback: CallbackQuery, state: FSMContext) -> N
             await callback.answer()
             await state.clear()
             await callback.message.edit_text(
-                "🪪 Мой профиль\n\nВыбери раздел:",
+                "Профиль",
                 reply_markup=build_profile_settings_markup()
             )
             return
@@ -312,7 +312,7 @@ async def handle_about_callback(callback: CallbackQuery, state: FSMContext) -> N
             await callback.answer()
             await state.clear()
             await callback.message.edit_text(
-                "🪪 Мой профиль\n\nВыбери раздел:",
+                "Профиль",
                 reply_markup=build_profile_settings_markup()
             )
             return

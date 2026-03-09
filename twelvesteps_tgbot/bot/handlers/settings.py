@@ -18,10 +18,7 @@ from .about_me import _start_mini_survey
 
 async def handle_main_settings(message: Message, state: FSMContext) -> None:
     """Handle main settings button - show settings menu"""
-    settings_text = (
-        "⚙️ Настройки\n\n"
-        "Выбери раздел настроек:"
-    )
+    settings_text = "Настройки"
     await message.answer(settings_text, reply_markup=build_main_settings_markup())
 
 async def handle_main_settings_callback(callback: CallbackQuery, state: FSMContext) -> None:
@@ -224,7 +221,7 @@ async def handle_profile_settings_callback(callback: CallbackQuery, state: FSMCo
         if data == "profile_settings_back":
             await state.clear()
             await callback.message.edit_text(
-                "⚙️ Настройки\n\nВыбери раздел настроек:",
+                "Настройки",
                 reply_markup=build_main_settings_markup()
             )
             await callback.answer()

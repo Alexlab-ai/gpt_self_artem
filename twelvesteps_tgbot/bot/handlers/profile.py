@@ -106,7 +106,7 @@ async def _render_profile_info_menu(callback: CallbackQuery, token: str, source:
     buttons.append([InlineKeyboardButton(text="➕ Добавить раздел", callback_data="profile_custom_section")])
     buttons.append([InlineKeyboardButton(text="◀️", callback_data=_profile_menu_callback(source))])
 
-    text = "📋 Информация обо мне\n\nВыбери раздел."
+    text = "Информация обо мне"
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     if send_new:
@@ -240,7 +240,7 @@ async def handle_profile(message: Message, state: FSMContext) -> None:
     await state.clear()
     from bot.config import build_profile_settings_markup
     await message.answer(
-        "🪪 Мой профиль\n\nВыбери раздел:",
+        "Профиль",
         reply_markup=build_profile_settings_markup()
     )
 
@@ -457,7 +457,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
         elif data == "profile_back":
             await state.clear()
             await callback.message.edit_text(
-                "🪪 Мой профиль\n\nВыбери раздел:",
+                "Профиль",
                 reply_markup=build_profile_settings_markup()
             )
             await callback.answer()
@@ -470,7 +470,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
             except Exception:
                 pass
             await callback.message.answer(
-                "🪪 Мой профиль\n\nВыбери раздел:",
+                "Профиль",
                 reply_markup=build_profile_settings_markup()
             )
             await callback.answer()
@@ -871,7 +871,7 @@ async def handle_profile_callback(callback: CallbackQuery, state: FSMContext) ->
 
                 await edit_long_message(
                     callback,
-                    "✅ Раздел создан!\n\n📋 Информация обо мне\n\nВыбери раздел.",
+                    "✅ Раздел создан!\n\nИнформация обо мне",
                     reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
                 )
             except Exception as e:
@@ -1518,7 +1518,7 @@ async def handle_profile_custom_section(message: Message, state: FSMContext) -> 
         buttons.append([InlineKeyboardButton(text="◀️", callback_data="profile_back_to_settings")])
 
         await message.answer(
-            f"✅ Раздел создан!\n\n📋 Информация обо мне\n\nВыбери раздел.",
+            f"✅ Раздел создан!\n\nИнформация обо мне",
             reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
         )
 

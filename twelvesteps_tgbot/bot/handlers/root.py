@@ -55,7 +55,7 @@ async def show_main_menu(message_or_callback_message) -> None:
     await message_or_callback_message.answer(MAIN_MENU_TEXT, reply_markup=build_main_menu_markup())
 
 async def handle_root_menu(message: Message, state: FSMContext) -> None:
-    await message.answer("📋 Меню\n\nВыбери раздел:", reply_markup=build_root_menu_markup())
+    await message.answer("Меню", reply_markup=build_root_menu_markup())
 
 async def handle_tariffs(message: Message, state: FSMContext) -> None:
     text = (
@@ -71,7 +71,7 @@ async def handle_tariffs(message: Message, state: FSMContext) -> None:
 async def handle_root_callback(callback: CallbackQuery, state: FSMContext) -> None:
     data = callback.data
     if data == "root_menu":
-        await callback.message.edit_text("📋 Меню\n\nВыбери раздел:", reply_markup=build_root_menu_markup())
+        await callback.message.edit_text("Меню", reply_markup=build_root_menu_markup())
         await callback.answer()
         return
     if data == "root_close":
@@ -83,15 +83,15 @@ async def handle_root_callback(callback: CallbackQuery, state: FSMContext) -> No
         await callback.answer()
         return
     if data == "root_help":
-        await callback.message.edit_text("❓ Помощь\n\nВыбери раздел для просмотра:", reply_markup=build_faq_menu_markup())
+        await callback.message.edit_text("Помощь", reply_markup=build_faq_menu_markup())
         await callback.answer()
         return
     if data == "root_settings":
-        await callback.message.edit_text("⚙️ Настройки\n\nВыбери раздел настроек:", reply_markup=build_main_settings_markup())
+        await callback.message.edit_text("Настройки", reply_markup=build_main_settings_markup())
         await callback.answer()
         return
     if data == "root_profile":
-        await callback.message.edit_text("🪪 Профиль\n\nВыбери раздел:", reply_markup=build_profile_settings_markup())
+        await callback.message.edit_text("Профиль", reply_markup=build_profile_settings_markup())
         await callback.answer()
         return
     if data == "root_steps":
