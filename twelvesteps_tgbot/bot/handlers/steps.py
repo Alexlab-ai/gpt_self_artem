@@ -348,9 +348,9 @@ async def handle_step_answer_mode(message: Message, state: FSMContext) -> None:
                     answered_questions=step_info.get("answered_questions", 0),
                     total_questions=step_info.get("total_questions", 0)
                 )
-                full_response = f"{progress_indicator}\n\n✅ Ответ завершён и сохранён!\n\n{response_text}"
+                full_response = f"{progress_indicator}\n\n{response_text}"
             else:
-                full_response = f"✅ Ответ завершён и сохранён!\n\n{response_text}"
+                full_response = response_text
 
             state_data = await state.get_data()
             if state_data.get("action") == "complete":
@@ -429,11 +429,11 @@ async def handle_step_answer(message: Message, state: FSMContext) -> None:
                 answered_questions=step_info.get("answered_questions", 0),
                 total_questions=step_info.get("total_questions", 0)
             )
-            full_response = f"{progress_indicator}\n\n✅ Ответ сохранён!\n\n{response_text}"
+            full_response = f"{progress_indicator}\n\n{response_text}"
 
             await state.update_data(step_description=step_info.get("step_description", ""))
         else:
-            full_response = f"✅ Ответ сохранён!\n\n{response_text}"
+            full_response = response_text
 
         await send_long_message(message, full_response, reply_markup=build_step_actions_markup())
 
@@ -1890,9 +1890,7 @@ async def handle_template_field_input(message: Message, state: FSMContext) -> No
 
                     await send_long_message(
                         message,
-                        f"✅ Шаблон полностью заполнен!\n\n"
-                        f"📝 Твой ответ сохранён.\n\n"
-                        f"{response_text}",
+                        response_text,
                         reply_markup=build_step_actions_markup()
                     )
 
@@ -1905,7 +1903,6 @@ async def handle_template_field_input(message: Message, state: FSMContext) -> No
                     else:
                         await state.set_state(StepState.answering)
                 else:
-                    await message.answer("Ответ сохранён!")
                     await state.set_state(StepState.answering)
             else:
                 await message.answer("Ошибка при сохранении. Попробуй ещё раз.")
