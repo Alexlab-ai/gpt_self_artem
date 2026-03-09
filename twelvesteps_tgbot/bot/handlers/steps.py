@@ -1,5 +1,6 @@
 from typing import Optional
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.fsm.context import FSMContext
 from bot.backend import (
     BACKEND_CLIENT,
@@ -13,6 +14,7 @@ from bot.config import (
     build_exit_markup,
     build_main_menu_markup,
     build_error_markup,
+    build_root_menu_markup,
     build_steps_navigation_markup,
     build_steps_list_markup,
     build_step_questions_markup,
@@ -111,12 +113,15 @@ async def handle_steps(message: Message, state: FSMContext) -> None:
                         full_text = f"{progress_indicator}\n\n⏸ Есть сохранённый прогресс по шаблону\n📊 {template_progress.get('progress_summary', '')}\n\n❔{response_text}"
 
 
-                    await state.update_data(step_description=step_info.get("step_description", ""))
+                    await state.update_data(
+                        step_description=step_info.get("step_description", ""),
+                        nav_level="question",
+                    )
 
                     await send_long_message(
                         message,
                         full_text,
-                        reply_markup=build_step_actions_markup(has_template_progress=bool(template_progress), show_description=False)
+                        reply_markup=build_step_actions_markup(has_template_progress=bool(template_progress))
                     )
                     await state.set_state(StepState.answering)
                 else:
@@ -290,7 +295,7 @@ async def handle_step_answer_mode(message: Message, state: FSMContext) -> None:
             else:
                 full_response = f"✅ Ответ обновлён!\n\n❔{response_text}"
 
-            await send_long_message(message, full_response, reply_markup=build_step_actions_markup(show_description=False))
+            await send_long_message(message, full_response, reply_markup=build_step_actions_markup())
             await state.update_data(action=None, current_question_id=None)
             await state.set_state(StepState.answering)
 
@@ -349,7 +354,7 @@ async def handle_step_answer_mode(message: Message, state: FSMContext) -> None:
                 ])
                 await send_long_message(message, full_response, reply_markup=complete_result_markup)
             else:
-                await send_long_message(message, full_response, reply_markup=build_step_actions_markup(show_description=False))
+                await send_long_message(message, full_response, reply_markup=build_step_actions_markup())
             await state.update_data(action=None, current_draft="")
             await state.set_state(StepState.answering)
 
@@ -423,7 +428,7 @@ async def handle_step_answer(message: Message, state: FSMContext) -> None:
         else:
             full_response = f"✅ Ответ сохранён!\n\n❔{response_text}"
 
-        await send_long_message(message, full_response, reply_markup=build_step_actions_markup(show_description=False))
+        await send_long_message(message, full_response, reply_markup=build_step_actions_markup())
 
         if is_completed:
              await message.answer("Этап завершен! 🎉 Возвращаю в обычный режим.", reply_markup=build_main_menu_markup())
@@ -923,7 +928,8 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
 
                     await state.update_data(
                         step_description=step_info.get("step_description", ""),
-                        current_draft=draft_text
+                        current_draft=draft_text,
+                        nav_level="question",
                     )
 
                     await edit_long_message(
@@ -954,12 +960,15 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                     )
                     full_text = f"{progress_indicator}\n\n❔{response_text}"
 
-                    await state.update_data(step_description=step_info.get("step_description", ""))
+                    await state.update_data(
+                        step_description=step_info.get("step_description", ""),
+                        nav_level="question",
+                    )
 
                     await edit_long_message(
                         callback,
                         full_text,
-                        reply_markup=build_step_actions_markup(show_description=False)
+                        reply_markup=build_step_actions_markup()
                     )
                     await state.set_state(StepState.answering)
                     await callback.answer()
@@ -1210,49 +1219,38 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             await callback.answer()
             return
 
-        if data == "step_toggle_description":
-            step_info = await BACKEND_CLIENT.get_current_step_info(token)
-            if not step_info:
-                await callback.answer("Не удалось получить информацию о шаге")
-                return
-
-            step_data = await get_current_step_question(telegram_id, username, first_name)
-            if not step_data:
-                await callback.answer("Нет активного вопроса")
-                return
-
-            response_text = step_data.get("message", "")
+        if data == "step_show_description":
             state_data = await state.get_data()
-            show_description = state_data.get("show_step_description", False)
-            step_description = step_info.get("step_description", "")
+            step_description = state_data.get("step_description", "")
 
-            progress_indicator = format_step_progress_indicator(
-                step_number=step_info.get("step_number"),
-                total_steps=step_info.get("total_steps", 12),
-                step_title=step_info.get("step_title"),
-                answered_questions=step_info.get("answered_questions", 0),
-                total_questions=step_info.get("total_questions", 0)
-            )
-
-            if show_description:
-                full_text = f"{progress_indicator}\n\n❔{response_text}"
-                new_show_description = False
-            else:
+            if not step_description:
+                step_info = await BACKEND_CLIENT.get_current_step_info(token)
+                step_description = step_info.get("step_description", "") if step_info else ""
                 if step_description:
-                    full_text = f"{progress_indicator}\n\n{step_description}\n\n❔{response_text}"
-                else:
-                    full_text = f"{progress_indicator}\n\n❔{response_text}"
-                    await callback.answer("Описание шага пока не добавлено")
-                    return
-                new_show_description = True
+                    await state.update_data(step_description=step_description)
 
-            await state.update_data(show_step_description=new_show_description)
+            if not step_description:
+                await callback.answer("Описание шага пока не добавлено")
+                return
 
-            await edit_long_message(
-                callback,
-                full_text,
-                reply_markup=build_step_actions_markup(show_description=new_show_description)
-            )
+            back_markup = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="◀️ Назад", callback_data="step_continue")]
+            ])
+
+            try:
+                await callback.message.edit_text(
+                    f"📖 Описание шага\n\n{step_description}",
+                    reply_markup=back_markup,
+                )
+            except TelegramBadRequest:
+                try:
+                    await callback.message.delete()
+                except Exception:
+                    pass
+                await callback.message.answer(
+                    f"📖 Описание шага\n\n{step_description}",
+                    reply_markup=back_markup,
+                )
             await callback.answer()
             return
 
@@ -1555,6 +1553,7 @@ async def handle_steps_navigation_callback(callback: CallbackQuery, state: FSMCo
                 logger.info(f"Received {len(steps)} steps for user {telegram_id}")
 
                 if steps:
+                    await state.update_data(nav_level="list")
                     await callback.answer()
                     logger.info(f"Building steps list markup for {len(steps)} steps")
                     markup = build_steps_list_markup(steps)
@@ -1621,10 +1620,26 @@ async def handle_steps_navigation_callback(callback: CallbackQuery, state: FSMCo
             if step_data:
                 response_text = step_data.get("message", "")
                 if response_text:
+                    step_info = await BACKEND_CLIENT.get_current_step_info(token)
+                    progress_indicator = ""
+                    if step_info and step_info.get("step_number"):
+                        progress_indicator = format_step_progress_indicator(
+                            step_number=step_info.get("step_number"),
+                            total_steps=step_info.get("total_steps", 12),
+                            step_title=step_info.get("step_title"),
+                            answered_questions=step_info.get("answered_questions", 0),
+                            total_questions=step_info.get("total_questions", 0)
+                        )
+                        await state.update_data(
+                            step_description=step_info.get("step_description", ""),
+                            nav_level="question",
+                        )
+
+                    full_text = f"{progress_indicator}\n\n❔{response_text}" if progress_indicator else response_text
                     await callback.answer()
                     await edit_long_message(
                         callback,
-                        response_text,
+                        full_text,
                         reply_markup=build_step_actions_markup()
                     )
                     await state.set_state(StepState.answering)
@@ -1635,22 +1650,74 @@ async def handle_steps_navigation_callback(callback: CallbackQuery, state: FSMCo
             return
 
         if data == "steps_back":
-            # Back = вернуться в меню "Работа по шагу" (а не перерисовывать тот же самый вопрос)
+            state_data = await state.get_data()
+            nav_level = state_data.get("nav_level", "question")
+
+            if nav_level == "question":
+                # Из вопроса → экран шага (заголовок + навигация шага)
+                step_info = await BACKEND_CLIENT.get_current_step_info(token)
+                if step_info and step_info.get("step_number"):
+                    step_number = step_info.get("step_number")
+                    step_title = step_info.get("step_title", "")
+                    header = f"🪜 Шаг {step_number} — {step_title}" if step_title else f"🪜 Шаг {step_number}"
+                    await state.update_data(nav_level="step")
+                    try:
+                        await callback.message.edit_text(
+                            header,
+                            reply_markup=build_steps_navigation_markup(),
+                        )
+                    except TelegramBadRequest:
+                        await callback.message.answer(header, reply_markup=build_steps_navigation_markup())
+                else:
+                    await state.update_data(nav_level="step")
+                    try:
+                        await callback.message.edit_text(
+                            "🪜 Работа по шагу",
+                            reply_markup=build_steps_navigation_markup(),
+                        )
+                    except TelegramBadRequest:
+                        await callback.message.answer("🪜 Работа по шагу", reply_markup=build_steps_navigation_markup())
+
+            elif nav_level == "step":
+                # Из экрана шага → список шагов
+                steps_data = await BACKEND_CLIENT.get_steps_list(token)
+                steps = steps_data.get("steps", []) if steps_data else []
+                await state.update_data(nav_level="list")
+                try:
+                    await callback.message.edit_text(
+                        "🔢 Выбери шаг для работы:",
+                        reply_markup=build_steps_list_markup(steps),
+                    )
+                except TelegramBadRequest:
+                    await callback.message.answer("🔢 Выбери шаг для работы:", reply_markup=build_steps_list_markup(steps))
+
+            else:
+                # Из списка шагов → главное меню "Работа по шагу"
+                await state.update_data(nav_level="step")
+                try:
+                    await callback.message.edit_text(
+                        "🪜 Работа по шагу",
+                        reply_markup=build_steps_navigation_markup(),
+                    )
+                except TelegramBadRequest:
+                    await callback.message.answer("🪜 Работа по шагу", reply_markup=build_steps_navigation_markup())
+
             await callback.answer()
-            await edit_long_message(
-                callback,
-                "🪜 Работа по шагу",
-                reply_markup=build_steps_navigation_markup()
-            )
-            await state.set_state(StepState.answering)
             return
 
         if data == "steps_to_main":
             try:
-                await callback.message.delete()
-            except Exception:
-                pass
-            await show_main_menu(callback.message)
+                await callback.message.edit_text(
+                    "📋 Меню\n\nВыбери раздел:",
+                    reply_markup=build_root_menu_markup(),
+                )
+            except TelegramBadRequest:
+                try:
+                    await callback.message.delete()
+                except Exception:
+                    pass
+                await callback.message.answer("📋 Меню\n\nВыбери раздел:", reply_markup=build_root_menu_markup())
+            await state.clear()
             await callback.answer()
             return
 
@@ -1723,13 +1790,13 @@ async def handle_step_selection_callback(callback: CallbackQuery, state: FSMCont
 
             full_text = f"{progress_indicator}\n\n❔{response_text}"
 
-            await state.update_data(step_description=step_description)
+            await state.update_data(step_description=step_description, nav_level="question")
 
             try:
                 await edit_long_message(
                     callback,
                     full_text,
-                    reply_markup=build_step_actions_markup(show_description=False)
+                    reply_markup=build_step_actions_markup()
                 )
             except TelegramBadRequest as e:
                 if "message is not modified" in str(e).lower():
@@ -1738,7 +1805,7 @@ async def handle_step_selection_callback(callback: CallbackQuery, state: FSMCont
                     logger.warning(f"TelegramBadRequest when editing message for step {step_id}: {e}")
                     await callback.message.answer(
                         full_text,
-                        reply_markup=build_step_actions_markup(show_description=False)
+                        reply_markup=build_step_actions_markup()
                     )
             except Exception as edit_error:
                 logger.exception(f"Failed to edit message for step {step_id}: {edit_error}")
