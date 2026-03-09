@@ -1205,10 +1205,9 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             ) if step_info else ""
 
             complete_text = f"{progress_indicator}\n\n" if progress_indicator else ""
-            complete_text += "✔️ Завершить и перейти\n\n"
             if current_question_text:
                 complete_text += f"{current_question_text}\n\n"
-            complete_text += "Введи финальный ответ и отправь его. После этого ответ будет сохранён и ты перейдёшь к следующему вопросу:"
+            complete_text += "Напиши ответ и отправь:"
 
             complete_markup = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="step_back_from_answer")]

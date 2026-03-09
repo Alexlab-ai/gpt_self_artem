@@ -450,10 +450,7 @@ def build_step_actions_markup(**kwargs) -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton(text="📖 Подробнее о шаге", callback_data="step_show_description"),
-        ],
-        [
-            InlineKeyboardButton(text="◀️ Назад", callback_data="steps_back"),
-            InlineKeyboardButton(text="🏠", callback_data="steps_to_main"),
+            InlineKeyboardButton(text="🏠 Меню", callback_data="steps_to_main"),
         ],
     ])
 
@@ -466,7 +463,7 @@ def build_step_answer_mode_markup() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="📝 Просмотреть черновик", callback_data="step_view_draft")
         ],
         [
-            InlineKeyboardButton(text="✏️ Редактировать последний ответ", callback_data="step_edit_last"),
+            InlineKeyboardButton(text="✏️ Редактировать последний", callback_data="step_edit_last"),
             InlineKeyboardButton(text="🔄 Сбросить", callback_data="step_reset_draft")
         ],
         [
