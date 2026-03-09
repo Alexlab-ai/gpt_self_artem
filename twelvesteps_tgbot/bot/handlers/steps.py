@@ -1230,7 +1230,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                         step_info.get("description") or
                         ""
                     )
-                logger.info(f"step_show_description: keys={list(step_info.keys()) if step_info else None}, desc_len={len(description)}")
+                logger.info(f"step_show_description: desc_len={len(description)}, keys={list(step_info.keys()) if step_info else None}")
 
                 if not description:
                     await callback.answer("Описание пока не загружено", show_alert=True)

@@ -127,23 +127,27 @@ STEP_DESCRIPTIONS = {
 
 
 async def update_step_descriptions():
-    """Update step descriptions in the database using the existing session factory."""
+    """Update step descriptions in the database using the existing session factory.
+
+    Only updates if the current description is missing or shorter than 500 chars
+    (old stubs).
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
     async with async_session_factory() as session:
         async with session.begin():
-            result = await session.execute(select(Step).order_by(Step.index))
-            steps = result.scalars().all()
-
-            if not steps:
-                print("⚠️ No steps found in database — skipping description update")
-                return
-
             updated_count = 0
-            for step in steps:
-                if step.index in STEP_DESCRIPTIONS:
-                    info = STEP_DESCRIPTIONS[step.index]
-                    step.title = info["title"]
-                    step.description = info["description"]
+            for step_index, info in STEP_DESCRIPTIONS.items():
+                description = info["description"]
+                result = await session.execute(select(Step).where(Step.index == step_index))
+                step = result.scalar_one_or_none()
+                if step and (not step.description or len(step.description) < 500):
+                    step.description = description
                     updated_count += 1
+                    logger.info(f"Step {step_index}: description updated ({len(description)} chars)")
 
-            await session.commit()
-            print(f"✅ Updated {updated_count} step descriptions")
+            if updated_count == 0:
+                print("✅ Step descriptions already up to date")
+            else:
+                print(f"✅ Updated {updated_count} step descriptions")
