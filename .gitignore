@@ -4,4 +4,6 @@ telegram.env
 syda/
 docs/
 .cursorignore
+__pycache__/
+*.pyc
 !plan.md
