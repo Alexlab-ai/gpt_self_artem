@@ -27,6 +27,7 @@ from bot.config import (
     build_progress_main_markup,
     build_progress_view_answers_steps_markup,
     build_progress_view_answers_questions_markup,
+    build_progress_questions_group_markup,
     build_settings_steps_list_markup,
     build_settings_questions_list_markup,
     build_settings_select_step_for_question_markup,
@@ -319,7 +320,6 @@ async def handle_step_answer_mode(message: Message, state: FSMContext) -> None:
 
             if step_next.get("error"):
                 error_message = step_next.get("message", "Ошибка валидации")
-                from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
                 error_markup = InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="◀️ Назад", callback_data="step_back_from_answer")]
                 ])
@@ -348,7 +348,6 @@ async def handle_step_answer_mode(message: Message, state: FSMContext) -> None:
 
             state_data = await state.get_data()
             if state_data.get("action") == "complete":
-                from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
                 complete_result_markup = InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="◀️ Назад", callback_data="step_back_from_answer")]
                 ])
@@ -1005,7 +1004,6 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                 draft_text += "Введи текст черновика и отправь его:"
 
             await state.update_data(action="save_draft")
-            from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
             draft_markup = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="step_back_from_answer")]
             ])
@@ -1153,7 +1151,6 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             draft_text += "Введи новый текст для обновления черновика или отправь текущий для сохранения:"
 
             await state.update_data(action="save_draft", current_draft=existing_draft)
-            from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
             draft_markup = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="step_back_from_answer")]
             ])
@@ -1210,7 +1207,6 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                 complete_text += f"❔{current_question_text}\n\n"
             complete_text += "Введи финальный ответ и отправь его. После этого ответ будет сохранён и ты перейдёшь к следующему вопросу:"
 
-            from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
             complete_markup = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="step_back_from_answer")]
             ])
@@ -2002,6 +1998,49 @@ async def handle_questions_group_callback(callback: CallbackQuery, state: FSMCon
 
     except Exception as exc:
         logger.exception("Error handling questions group callback for %s: %s", telegram_id, exc)
+        await callback.answer("Ошибка. Попробуй позже.")
+
+
+async def handle_progress_questions_group_callback(callback: CallbackQuery, state: FSMContext) -> None:
+    """Handle progress_qgroup_{step_id}_{group_index} — show questions within a group in progress view."""
+    data = callback.data
+    telegram_id = callback.from_user.id
+    username = callback.from_user.username
+    first_name = callback.from_user.first_name
+
+    try:
+        parts = data.split("_")
+        step_id = int(parts[2])
+        group_index = int(parts[3])
+
+        token = await get_or_fetch_token(telegram_id, username, first_name)
+        if not token:
+            await callback.answer("Ошибка авторизации. Нажми /start.")
+            return
+
+        questions_data = await BACKEND_CLIENT.get_step_questions(token, step_id)
+        questions = questions_data.get("questions", []) if questions_data else []
+
+        if not questions:
+            await callback.answer("Вопросы не найдены")
+            return
+
+        GROUP_SIZE = 15
+        start = group_index * GROUP_SIZE + 1
+        end = min((group_index + 1) * GROUP_SIZE, len(questions))
+
+        try:
+            await callback.message.edit_text(
+                f"📋 Вопросы {start}–{end}",
+                reply_markup=build_progress_questions_group_markup(questions, step_id, group_index),
+            )
+        except TelegramBadRequest as e:
+            if "message is not modified" not in str(e).lower():
+                raise
+        await callback.answer()
+
+    except Exception as exc:
+        logger.exception("Error handling progress questions group callback for %s: %s", telegram_id, exc)
         await callback.answer("Ошибка. Попробуй позже.")
 
 

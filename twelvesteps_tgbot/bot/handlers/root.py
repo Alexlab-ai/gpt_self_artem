@@ -41,7 +41,7 @@ from .shared import (
     USER_LOGS,
     logger,
 )
-from .steps import handle_steps, handle_about_step, handle_steps_settings, handle_step_answer, handle_step_answer_mode, handle_template_selection, handle_template_filling_callback, handle_steps_navigation_callback, handle_step_selection_callback, handle_question_view_callback, handle_step_action_callback, handle_progress_callback, handle_template_field_input, handle_steps_settings_callback, handle_questions_group_callback, handle_question_select_callback, handle_step_questions_list_callback
+from .steps import handle_steps, handle_about_step, handle_steps_settings, handle_step_answer, handle_step_answer_mode, handle_template_selection, handle_template_filling_callback, handle_steps_navigation_callback, handle_step_selection_callback, handle_question_view_callback, handle_step_action_callback, handle_progress_callback, handle_template_field_input, handle_steps_settings_callback, handle_questions_group_callback, handle_progress_questions_group_callback, handle_question_select_callback, handle_step_questions_list_callback
 from .step10 import handle_day, handle_step10_answer, handle_step10_callback
 from .feelings import handle_feelings, handle_feelings_callback, handle_feeling_selection_callback
 from .thanks import handle_thanks, handle_thanks_menu, handle_thanks_callback, handle_thanks_entry_input
@@ -410,6 +410,7 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.callback_query(F.data.startswith("settings_"))(handle_steps_settings_callback)
     dp.message(StateFilter(AboutMeStates.adding_entry))(handle_about_entry_input)
 
+    dp.callback_query(F.data.startswith("progress_qgroup_"))(handle_progress_questions_group_callback)
     dp.callback_query(F.data.startswith("progress_"))(handle_progress_callback)
 
     dp.callback_query(F.data.startswith("thanks_"))(handle_thanks_callback)

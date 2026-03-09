@@ -717,19 +717,68 @@ def build_progress_view_answers_steps_markup(steps: list[dict]) -> InlineKeyboar
 
 
 def build_progress_view_answers_questions_markup(questions: list[dict], step_id: int, back_callback: str = "progress_view_answers") -> InlineKeyboardMarkup:
-    """Markup for selecting a question to view answer (numbers only, like feelings)."""
+    """Markup for selecting a question to view answer, with grouping for large sets."""
+    GROUP_SIZE = 15
+    total = len(questions)
     buttons = []
-    for i in range(0, len(questions), 3):
+
+    if total <= GROUP_SIZE:
+        for i in range(0, total, 3):
+            row = []
+            for j in range(3):
+                if i + j < total:
+                    q = questions[i + j]
+                    q_id = q.get('id')
+                    q_number = q.get('number', i + j + 1)
+                    if q_id is None:
+                        continue
+                    status = q.get("status", "")
+                    if status == "COMPLETED":
+                        emoji = "✅"
+                    elif status == "IN_PROGRESS" or q.get("answer_preview"):
+                        emoji = "⏳"
+                    else:
+                        emoji = "⬜"
+                    row.append(InlineKeyboardButton(
+                        text=f"{emoji} {q_number}",
+                        callback_data=f"progress_answers_question_{q_id}"
+                    ))
+            if row:
+                buttons.append(row)
+    else:
+        num_groups = (total + GROUP_SIZE - 1) // GROUP_SIZE
+        for g in range(num_groups):
+            start = g * GROUP_SIZE + 1
+            end = min((g + 1) * GROUP_SIZE, total)
+            answered_in_group = sum(
+                1 for q in questions[g*GROUP_SIZE:(g+1)*GROUP_SIZE]
+                if q.get("status") == "COMPLETED"
+            )
+            buttons.append([InlineKeyboardButton(
+                text=f"📦 Вопросы {start}–{end}  ({answered_in_group}/{end-start+1} ✅)",
+                callback_data=f"progress_qgroup_{step_id}_{g}"
+            )])
+
+    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data=back_callback)])
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+def build_progress_questions_group_markup(questions: list[dict], step_id: int, group_index: int) -> InlineKeyboardMarkup:
+    """Markup for a specific group of questions in progress view."""
+    GROUP_SIZE = 15
+    start = group_index * GROUP_SIZE
+    group_questions = questions[start:start + GROUP_SIZE]
+    buttons = []
+
+    for i in range(0, len(group_questions), 3):
         row = []
         for j in range(3):
-            if i + j < len(questions):
-                q = questions[i + j]
+            if i + j < len(group_questions):
+                q = group_questions[i + j]
                 q_id = q.get('id')
-                q_number = q.get('number', i + j + 1)
-
+                q_number = q.get('number', start + i + j + 1)
                 if q_id is None:
                     continue
-
                 status = q.get("status", "")
                 if status == "COMPLETED":
                     emoji = "✅"
@@ -737,7 +786,6 @@ def build_progress_view_answers_questions_markup(questions: list[dict], step_id:
                     emoji = "⏳"
                 else:
                     emoji = "⬜"
-
                 row.append(InlineKeyboardButton(
                     text=f"{emoji} {q_number}",
                     callback_data=f"progress_answers_question_{q_id}"
@@ -745,7 +793,10 @@ def build_progress_view_answers_questions_markup(questions: list[dict], step_id:
         if row:
             buttons.append(row)
 
-    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data=back_callback)])
+    buttons.append([InlineKeyboardButton(
+        text="◀️ Назад к группам",
+        callback_data=f"progress_view_answers_step_{step_id}"
+    )])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
