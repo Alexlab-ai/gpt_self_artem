@@ -68,6 +68,7 @@ from bot.config import (
     build_progress_main_markup,
     build_progress_view_answers_steps_markup,
     build_progress_view_answers_questions_markup,
+    build_progress_questions_group_markup,
     build_thanks_menu_markup,
     build_thanks_history_markup,
     build_thanks_input_markup,

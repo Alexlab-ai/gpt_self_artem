@@ -658,7 +658,7 @@ def build_about_section_actions_markup(section_id: str) -> InlineKeyboardMarkup:
 def build_progress_step_markup(step_id: int, step_number: int, step_title: str) -> InlineKeyboardMarkup:
     """Markup for viewing a specific step's progress."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📄 Посмотреть ответы", callback_data="progress_view_answers")],
+        [InlineKeyboardButton(text="📄 Посмотреть ответы", callback_data=f"progress_step_{step_id}")],
         [InlineKeyboardButton(text="◀️ Назад", callback_data="progress_main")]
     ])
 
@@ -666,27 +666,34 @@ def build_progress_step_markup(step_id: int, step_number: int, step_title: str) 
 
 
 def build_progress_main_markup(steps: list[dict]) -> InlineKeyboardMarkup:
-    """Main progress menu - shows steps as numbers only (like feelings)."""
+    """Main progress menu - shows steps with progress info."""
     buttons = []
-    for i in range(0, len(steps), 3):
-        row = []
-        for j in range(3):
-            if i + j < len(steps):
-                step = steps[i + j]
-                step_id = step.get('id')
-                step_number = step.get('number', step_id)
+    for step in steps:
+        step_id = step.get('id')
+        step_number = step.get('number', step_id)
+        step_title = step.get('title', '')
+        answered = step.get('answered_questions', 0)
+        total = step.get('total_questions', 0)
 
-                if step_id is None or step_number is None:
-                    continue
+        if step_id is None or step_number is None:
+            continue
 
-                row.append(InlineKeyboardButton(
-                    text=f"{step_number}",
-                    callback_data=f"progress_step_{step_id}"
-                ))
-        if row:
-            buttons.append(row)
+        if total > 0 and answered >= total:
+            emoji = "✅"
+        elif answered and answered > 0:
+            emoji = "⏳"
+        else:
+            emoji = "⬜"
 
-    buttons.append([InlineKeyboardButton(text="📄 Посмотреть ответы", callback_data="progress_view_answers")])
+        label = f"{emoji} Шаг {step_number}"
+        if total > 0:
+            label += f"  ({answered}/{total})"
+
+        buttons.append([InlineKeyboardButton(
+            text=label,
+            callback_data=f"progress_step_{step_id}"
+        )])
+
     buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="steps_back")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -795,7 +802,7 @@ def build_progress_questions_group_markup(questions: list[dict], step_id: int, g
 
     buttons.append([InlineKeyboardButton(
         text="◀️ Назад к группам",
-        callback_data=f"progress_view_answers_step_{step_id}"
+        callback_data=f"progress_step_{step_id}"
     )])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 

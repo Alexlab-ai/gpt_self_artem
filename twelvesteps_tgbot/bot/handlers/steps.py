@@ -547,41 +547,42 @@ async def handle_progress_callback(callback: CallbackQuery, state: FSMContext) -
             await callback.answer("Ошибка загрузки вопросов")
         return
 
-    if data == "progress_view_answers":
-        try:
-            steps_list = await BACKEND_CLIENT.get_steps_list(token)
-            steps = steps_list.get("steps", []) if steps_list else []
+    if data == "progress_view_answers" or data.startswith("progress_answers_step_"):
+        if data.startswith("progress_answers_step_"):
+            step_id = int(data.replace("progress_answers_step_", ""))
+        else:
+            state_data = await state.get_data()
+            step_id = state_data.get("progress_view_step_id")
 
-            await callback.message.edit_text(
-                "📄 Посмотреть ответы",
-                reply_markup=build_progress_view_answers_steps_markup(steps)
-            )
-        except Exception as e:
-            logger.exception("Error loading steps: %s", e)
-            await callback.answer("Ошибка загрузки")
-        await callback.answer()
-        return
+        if step_id:
+            try:
+                questions_data = await BACKEND_CLIENT.get_step_questions(token, step_id)
+                questions = questions_data.get("questions", []) if questions_data else []
+                step_info = questions_data.get("step", {}) if questions_data else {}
 
-    if data.startswith("progress_answers_step_"):
-        step_id = int(data.replace("progress_answers_step_", ""))
+                step_number = step_info.get("number", step_id)
+                step_title = step_info.get("title", "")
 
-        try:
-            questions_data = await BACKEND_CLIENT.get_step_questions(token, step_id)
-            questions = questions_data.get("questions", []) if questions_data else []
-            step_info = questions_data.get("step", {}) if questions_data else {}
+                await state.update_data(progress_view_step_id=step_id)
 
-            step_number = step_info.get("number", step_id)
-            step_title = step_info.get("title", "")
-
-            await state.update_data(progress_view_step_id=step_id)
-
-            await callback.message.edit_text(
-                f"📄 Посмотреть ответы",
-                reply_markup=build_progress_view_answers_questions_markup(questions, step_id)
-            )
-        except Exception as e:
-            logger.exception("Error loading questions: %s", e)
-            await callback.answer("Ошибка загрузки")
+                await callback.message.edit_text(
+                    f"🪜 Шаг {step_number} — {step_title}\n\nВыбери вопрос для просмотра ответа:",
+                    reply_markup=build_progress_view_answers_questions_markup(questions, step_id)
+                )
+            except Exception as e:
+                logger.exception("Error loading questions: %s", e)
+                await callback.answer("Ошибка загрузки")
+        else:
+            try:
+                steps_list = await BACKEND_CLIENT.get_steps_list(token)
+                steps = steps_list.get("steps", []) if steps_list else []
+                await callback.message.edit_text(
+                    "📋 Мой прогресс",
+                    reply_markup=build_progress_main_markup(steps)
+                )
+            except Exception as e:
+                logger.exception("Error loading steps: %s", e)
+                await callback.answer("Ошибка загрузки")
         await callback.answer()
         return
 
