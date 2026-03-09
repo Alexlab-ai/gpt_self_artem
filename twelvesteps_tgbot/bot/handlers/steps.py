@@ -192,6 +192,12 @@ async def handle_step_answer_mode(message: Message, state: FSMContext) -> None:
         action = state_data.get("action")
 
         if action == "save_draft":
+            if len(user_text.strip()) < 5:
+                await message.answer(
+                    "⚠️ Слишком короткий текст. Минимум 5 символов.",
+                    reply_markup=build_step_answer_mode_markup()
+                )
+                return
             logger.info(f"Saving draft for user {telegram_id}, text length: {len(user_text)}")
             save_result = await BACKEND_CLIENT.save_draft(token, user_text)
             logger.info(f"Draft save result for user {telegram_id}: {save_result}")
@@ -362,13 +368,19 @@ async def handle_step_answer_mode(message: Message, state: FSMContext) -> None:
                 await state.clear()
             return
 
+        if len(user_text.strip()) < 5:
+            await message.answer(
+                "⚠️ Слишком короткий текст. Минимум 5 символов.",
+                reply_markup=build_step_answer_mode_markup()
+            )
+            return
+
         logger.info(f"Auto-saving draft for user {telegram_id}, text length: {len(user_text)}")
         save_result = await BACKEND_CLIENT.save_draft(token, user_text)
         logger.info(f"Auto-save draft result for user {telegram_id}: {save_result}")
         await state.update_data(current_draft=user_text)
         await message.answer(
-            "💾 Текст сохранён как черновик.\n\n"
-            "Используй кнопки для управления:",
+            "💾 Текст сохранён как черновик.",
             reply_markup=build_step_answer_mode_markup()
         )
 

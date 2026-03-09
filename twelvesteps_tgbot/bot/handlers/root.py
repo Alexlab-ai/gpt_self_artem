@@ -255,44 +255,8 @@ async def qa_report(message: Message):
     await message.answer(f"Found {len(logs)} interactions.")
 
 async def handle_message(message: Message, debug: bool) -> None:
-    telegram_id = message.from_user.id
-
-    try:
-        backend_reply = await call_legacy_chat(
-            telegram_id=telegram_id,
-            text=message.text,
-            debug=debug
-        )
-
-        reply_text = "..."
-        if isinstance(backend_reply, str):
-             try:
-                data = json.loads(backend_reply)
-                reply_text = data.get("reply", "Error parsing reply")
-             except (json.JSONDecodeError, TypeError):
-                reply_text = backend_reply
-        else:
-             reply_text = backend_reply.reply
-             if backend_reply.log:
-                uid = message.from_user.id
-                log = backend_reply.log
-                log.timestamp = int(datetime.datetime.utcnow().timestamp())
-                USER_LOGS.setdefault(uid, []).append(log)
-
-        await send_long_message(message, reply_text, reply_markup=build_main_menu_markup())
-
-    except Exception as exc:
-        error_msg = str(exc)
-        if "bot was blocked by the user" in error_msg or "Forbidden: bot was blocked" in error_msg:
-            logger.info(f"User {telegram_id} blocked the bot - skipping message")
-            return
-
-        logger.exception("Failed to get response from backend chat: %s", exc)
-        error_text = (
-            "❌ Не удалось получить ответ от сервера.\n\n"
-            "Произошла ошибка. Хочешь начать заново?"
-        )
-        await message.answer(error_text, reply_markup=build_error_markup())
+    """Catch-all for unhandled text messages — show menu instead of calling GPT."""
+    await message.answer("Меню", reply_markup=build_root_menu_markup())
 
 async def handle_start(message: Message, state: FSMContext) -> None:
     telegram_id = message.from_user.id
