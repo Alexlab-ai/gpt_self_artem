@@ -459,15 +459,12 @@ def build_step_answer_mode_markup() -> InlineKeyboardMarkup:
     """Markup for answer mode with draft controls."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="💾 Сохранить черновик", callback_data="step_save_draft"),
-            InlineKeyboardButton(text="📝 Просмотреть черновик", callback_data="step_view_draft")
-        ],
-        [
-            InlineKeyboardButton(text="✏️ Редактировать последний", callback_data="step_edit_last"),
+            InlineKeyboardButton(text="💾 Сохранить", callback_data="step_save_draft"),
+            InlineKeyboardButton(text="✏️ Изменить", callback_data="step_edit_last"),
             InlineKeyboardButton(text="🔄 Сбросить", callback_data="step_reset_draft")
         ],
         [
-            InlineKeyboardButton(text="✔️ Завершить и перейти", callback_data="step_complete")
+            InlineKeyboardButton(text="✔️ Следующий вопрос", callback_data="step_complete")
         ],
         [InlineKeyboardButton(text="◀️ Назад", callback_data="step_back_from_answer")]
     ])
