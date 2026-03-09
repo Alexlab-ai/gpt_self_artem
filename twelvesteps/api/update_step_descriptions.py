@@ -1,12 +1,7 @@
-"""Update step descriptions in the database."""
-import asyncio
-import os
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+"""Update step descriptions in the database on startup."""
 from sqlalchemy import select
 from db.models import Step
-
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:password@postgres:5432/twelvesteps")
+from db.database import async_session_factory
 
 STEP_DESCRIPTIONS = {
     1: {
@@ -132,21 +127,15 @@ STEP_DESCRIPTIONS = {
 
 
 async def update_step_descriptions():
-    """Update step descriptions in the database."""
-    engine = create_async_engine(DATABASE_URL)
-    async_session = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-
-    async with async_session() as session:
+    """Update step descriptions in the database using the existing session factory."""
+    async with async_session_factory() as session:
         async with session.begin():
             result = await session.execute(select(Step).order_by(Step.index))
             steps = result.scalars().all()
 
             if not steps:
-                print("No steps found in database!")
+                print("⚠️ No steps found in database — skipping description update")
                 return
-
-            print("Updating step descriptions...")
-            print("=" * 60)
 
             updated_count = 0
             for step in steps:
@@ -155,14 +144,6 @@ async def update_step_descriptions():
                     step.title = info["title"]
                     step.description = info["description"]
                     updated_count += 1
-                    print(f"  Step {step.index}: {info['title']}")
 
             await session.commit()
-            print("=" * 60)
-            print(f"Updated {updated_count} steps!")
-
-    await engine.dispose()
-
-
-if __name__ == "__main__":
-    asyncio.run(update_step_descriptions())
+            print(f"✅ Updated {updated_count} step descriptions")

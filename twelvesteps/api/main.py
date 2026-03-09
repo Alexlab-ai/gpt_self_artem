@@ -109,7 +109,7 @@ async def root():
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize profile sections on application startup"""
+    """Initialize profile sections and update step descriptions on application startup"""
     try:
         from db.init_profile_sections import init_profile_sections
         import asyncio
@@ -118,6 +118,15 @@ async def startup_event():
         print("✅ Profile sections initialized (if needed)")
     except Exception as e:
         print(f"⚠️ Warning: Could not initialize profile sections on startup: {e}")
+        import traceback
+        traceback.print_exc()
+
+    try:
+        from api.update_step_descriptions import update_step_descriptions
+        await update_step_descriptions()
+        print("✅ Step descriptions updated")
+    except Exception as e:
+        print(f"⚠️ Warning: Could not update step descriptions on startup: {e}")
         import traceback
         traceback.print_exc()
 
