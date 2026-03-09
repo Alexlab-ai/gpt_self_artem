@@ -915,15 +915,12 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                         full_text = (
                             f"{progress_indicator}\n\n"
                             f"{response_text}\n\n"
-                            f"📝 Поле для ответа:\n"
-                            f"💾 Черновик: {draft_text[:100]}{'...' if len(draft_text) > 100 else ''}"
+                            f"Черновик: {draft_text[:100]}{'...' if len(draft_text) > 100 else ''}"
                         )
                     else:
                         full_text = (
                             f"{progress_indicator}\n\n"
-                            f"{response_text}\n\n"
-                            f"📝 Поле для ответа:\n"
-                            f"[Введи свой ответ здесь]"
+                            f"{response_text}"
                         )
 
                     await state.update_data(
@@ -1176,9 +1173,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                     )
                     full_text = (
                         f"{progress_indicator}\n\n"
-                        f"{response_text}\n\n"
-                        f"📝 Поле для ответа:\n"
-                        f"[Поле очищено]"
+                        f"{response_text}"
                     )
                     await state.update_data(current_draft="")
                     await callback.message.edit_text(
