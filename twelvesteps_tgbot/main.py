@@ -14,6 +14,8 @@ from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.exceptions import TelegramConflictError
 
+from aiogram.types import BotCommand
+
 from bot.config import BOT_TOKEN
 from bot.handlers import register_handlers
 
@@ -67,6 +69,16 @@ async def main() -> None:
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
     register_handlers(dp)
+
+    await bot.set_my_commands([
+        BotCommand(command="start", description="Главное меню"),
+        BotCommand(command="steps", description="Работа по шагу"),
+        BotCommand(command="day", description="Самоанализ"),
+        BotCommand(command="thanks", description="Благодарности"),
+        BotCommand(command="profile", description="Профиль"),
+        BotCommand(command="settings", description="Настройки"),
+        BotCommand(command="sos", description="Помощь"),
+    ])
 
     app = web.Application()
     app.router.add_get("/", health_check)

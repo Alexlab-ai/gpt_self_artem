@@ -280,7 +280,7 @@ def build_steps_list_markup(steps: list[dict]) -> InlineKeyboardMarkup:
                     step_number = step_id
 
                 row.append(InlineKeyboardButton(
-                    text=f"Шаг {step_number}",
+                    text=f"📖 Шаг {step_number}",
                     callback_data=f"step_select_{step_id}"
                 ))
         if row:
@@ -303,9 +303,9 @@ def build_step_questions_markup(questions: list[dict], step_id: int) -> InlineKe
                 if i + j < total:
                     q = questions[i + j]
                     answered = q.get("is_answered", False)
-                    icon = "✅" if answered else "⬜"
+                    icon = "☑️" if answered else "▫️"
                     row.append(InlineKeyboardButton(
-                        text=f"{icon}{i+j+1}",
+                        text=f"{icon} {i+j+1}",
                         callback_data=f"question_select_{q['id']}"
                     ))
             if row:
@@ -320,7 +320,7 @@ def build_step_questions_markup(questions: list[dict], step_id: int) -> InlineKe
                 if q.get("is_answered", False)
             )
             buttons.append([InlineKeyboardButton(
-                text=f"📦 Вопросы {start}–{end}  ({answered_in_group}/{end-start+1} ✅)",
+                text=f"📂 Вопросы {start}–{end}  ({answered_in_group}/{end-start+1})",
                 callback_data=f"questions_group_{step_id}_{g}"
             )])
 
@@ -341,10 +341,10 @@ def build_questions_group_markup(questions: list[dict], step_id: int, group_inde
             if i + j < len(group_questions):
                 q = group_questions[i + j]
                 answered = q.get("is_answered", False)
-                icon = "✅" if answered else "⬜"
+                icon = "☑️" if answered else "▫️"
                 num = start + i + j + 1
                 row.append(InlineKeyboardButton(
-                    text=f"{icon}{num}",
+                    text=f"{icon} {num}",
                     callback_data=f"question_select_{q['id']}"
                 ))
         if row:
@@ -450,7 +450,7 @@ def build_step_actions_markup(**kwargs) -> InlineKeyboardMarkup:
         ],
         [
             InlineKeyboardButton(text="📖 Подробнее о шаге", callback_data="step_show_description"),
-            InlineKeyboardButton(text="🏠 Меню", callback_data="steps_to_main"),
+            InlineKeyboardButton(text="📋 Меню", callback_data="steps_to_main"),
         ],
     ])
 
@@ -672,11 +672,11 @@ def build_progress_main_markup(steps: list[dict]) -> InlineKeyboardMarkup:
             continue
 
         if total > 0 and answered >= total:
-            emoji = "✅"
+            emoji = "☑️"
         elif answered and answered > 0:
-            emoji = "⏳"
+            emoji = "🔄"
         else:
-            emoji = "⬜"
+            emoji = "▫️"
 
         label = f"{emoji} Шаг {step_number}"
         if total > 0:
@@ -734,11 +734,11 @@ def build_progress_view_answers_questions_markup(questions: list[dict], step_id:
                         continue
                     status = q.get("status", "")
                     if status == "COMPLETED":
-                        emoji = "✅"
+                        emoji = "☑️"
                     elif status == "IN_PROGRESS" or q.get("answer_preview"):
-                        emoji = "⏳"
+                        emoji = "🔄"
                     else:
-                        emoji = "⬜"
+                        emoji = "▫️"
                     row.append(InlineKeyboardButton(
                         text=f"{emoji} {q_number}",
                         callback_data=f"progress_answers_question_{q_id}"
@@ -755,7 +755,7 @@ def build_progress_view_answers_questions_markup(questions: list[dict], step_id:
                 if q.get("status") == "COMPLETED"
             )
             buttons.append([InlineKeyboardButton(
-                text=f"📦 Вопросы {start}–{end}  ({answered_in_group}/{end-start+1} ✅)",
+                text=f"📂 Вопросы {start}–{end}  ({answered_in_group}/{end-start+1})",
                 callback_data=f"progress_qgroup_{step_id}_{g}"
             )])
 
@@ -781,11 +781,11 @@ def build_progress_questions_group_markup(questions: list[dict], step_id: int, g
                     continue
                 status = q.get("status", "")
                 if status == "COMPLETED":
-                    emoji = "✅"
+                    emoji = "☑️"
                 elif status == "IN_PROGRESS" or q.get("answer_preview"):
-                    emoji = "⏳"
+                    emoji = "🔄"
                 else:
-                    emoji = "⬜"
+                    emoji = "▫️"
                 row.append(InlineKeyboardButton(
                     text=f"{emoji} {q_number}",
                     callback_data=f"progress_answers_question_{q_id}"
