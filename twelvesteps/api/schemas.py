@@ -494,6 +494,15 @@ class Step10ProgressResponse(BaseModel):
 
 
 
+class SessionContextResponse(BaseModel):
+    id: int
+    user_id: int
+    session_type: str
+    context_data: Dict[str, Any] = Field(default_factory=dict)
+    created_at: str
+    updated_at: str
+
+
 class SessionStateResponse(BaseModel):
     id: int
     user_id: int
