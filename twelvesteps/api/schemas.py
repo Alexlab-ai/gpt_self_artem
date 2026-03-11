@@ -610,3 +610,35 @@ class GratitudeListResponse(BaseModel):
     total: int
     page: int = 1
     page_size: int = 20
+
+# Yookassa
+
+class YookassaPaymentCreateRequest(BaseModel):
+    amount: float = Field(..., gt=0, description="Сумма платежа в рублях")
+    description: Optional[str] = Field(None, description="Описание платежа")
+    plan_type: str = Field("monthly", description="Тип подписки: monthly / yearly")
+    return_url: Optional[str] = Field(None, description="URL возврата после оплаты")
+
+class YookassaPaymentResponse(BaseModel):
+    id: str
+    status: str
+    confirmation_url: str
+    amount: str
+
+class PaymentStatusResponse(BaseModel):
+    payment_id: str
+    status: str
+    paid: bool
+    amount: str
+    description: Optional[str] = None
+
+class YookassaWebhookRequest(BaseModel):
+    """Модель для входящего webhook"""
+    type: str
+    event: Optional[str] = None
+    object: Dict[str, Any]
+
+class SubscriptionStatusResponse(BaseModel):
+    is_active: bool
+    expires_at: Optional[datetime] = None
+    plan_type: Optional[str] = None
