@@ -640,15 +640,13 @@ async def handle_progress_callback(callback: CallbackQuery, state: FSMContext) -
             if answer_text:
                 display_text = (
                     f"📄 Ответ\n\n"
-                    f"📌 {question_text}\n\n"
-                    f"— — —\n\n"
-                    f"{answer_text}"
+                    f"❓ {question_text}\n\n"
+                    f"💬 Твой ответ:\n\n{answer_text}"
                 )
             else:
                 display_text = (
                     f"📄 Ответ\n\n"
-                    f"📌 {question_text}\n\n"
-                    f"— — —\n\n"
+                    f"❓ {question_text}\n\n"
                     f"💬 Ответ пока не сохранён."
                 )
 

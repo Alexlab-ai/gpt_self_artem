@@ -130,7 +130,7 @@ def _build_profile_info_section_markup(section_id: int, entries: list[dict], sou
         buttons.append([InlineKeyboardButton(text="🗑 Удалить раздел", callback_data=f"profile_delete_section_{source}_{section_id}")])
     buttons.append([
         InlineKeyboardButton(text="◀️ К разделам", callback_data=back_cb),
-        InlineKeyboardButton(text="📋 Меню", callback_data="root_menu"),
+        InlineKeyboardButton(text="🏠 Меню", callback_data="root_menu"),
     ])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -1148,7 +1148,7 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                         f"✅ Ответ сохранён!\n\n"
                         f"{header}\n\n"
                         f"📋 {section_info.get('name', 'Следующий раздел')}\n\n"
-                        f"📌 {question_text}",
+                        f"❓ {question_text}",
                         reply_markup=combined_markup
                     )
                 else:
@@ -1157,7 +1157,7 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                         message,
                         f"✅ Ответ сохранён!\n\n"
                         f"{header}\n\n"
-                        f"📌 {question_text}",
+                        f"❓ {question_text}",
                         reply_markup=combined_markup
                     )
             else:
@@ -1190,7 +1190,7 @@ async def handle_profile_answer(message: Message, state: FSMContext) -> None:
                         f"✅ Раздел завершён!\n\n"
                         f"{header}\n\n"
                         f"📋 {section_info.get('name', 'Следующий раздел')}\n\n"
-                        f"📌 {question_text}",
+                        f"❓ {question_text}",
                         reply_markup=combined_markup
                     )
                 else:
