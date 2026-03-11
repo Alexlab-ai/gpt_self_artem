@@ -5,7 +5,7 @@ from functools import partial
 from aiogram import Dispatcher, F
 from aiogram.filters import Command, CommandStart, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery
 
 from bot.backend import (
     BACKEND_CLIENT,
@@ -22,7 +22,7 @@ from bot.config import (
     build_error_markup,
     build_exit_markup,
     build_root_menu_markup,
-    build_subscription_menu_markup,
+    build_tariffs_menu_markup,
     build_faq_menu_markup,
     build_main_settings_markup,
     build_profile_settings_markup,
@@ -57,34 +57,41 @@ async def show_main_menu(message_or_callback_message) -> None:
 async def handle_root_menu(message: Message, state: FSMContext) -> None:
     await message.answer("Меню", reply_markup=build_root_menu_markup())
 
-async def handle_subscription(message: Message, state: FSMContext) -> None:
+async def handle_tariffs(message: Message, state: FSMContext) -> None:
     text = (
-        "💎 *Подписка*\n"
+        "💎 *Тарифы*\n"
         "━━━━━━━━━━━━━━━\n\n"
-        "📌 *Твой тариф:* Free\n\n"
-        "🆓 *FREE — 0 ₽ / навсегда*\n"
+        "🆓 *FREE — 0 ₽ / навсегда*\n\n"
+        "Полноценная работа по программе:\n"
         "• Все 12 шагов — вопросы, ответы, черновики\n"
-        "• Ежедневный самоанализ\n"
-        "• Колесо чувств\n"
-        "• Благодарности\n"
-        "• Профиль, прогресс, SOS\n\n"
+        "• Ежедневный самоанализ — 10 вопросов\n"
+        "• Колесо чувств — все категории\n"
+        "• Благодарности — без лимита\n"
+        "• Профиль — стандартные секции\n"
+        "• Прогресс по шагам\n"
+        "• SOS — кризисная помощь\n"
+        "• AI-чат — до 5 сообщений в день\n\n"
         "━━━━━━━━━━━━━━━\n\n"
         "⭐ *PREMIUM*\n\n"
-        "│  1 мес  —  490 ₽\n"
-        "│  3 мес  —  1 290 ₽  ✦ Лучший выбор\n"
-        "│  12 мес —  3 990 ₽\n\n"
+        "│  1 мес  —  490 ₽   (490 ₽/мес)\n"
+        "│  3 мес  —  1 290 ₽  (430 ₽/мес)  ✦ Лучший выбор\n"
+        "│  12 мес —  3 990 ₽  (333 ₽/мес)\n\n"
         "Всё из Free, плюс:\n"
-        "• AI-чат без лимитов\n"
+        "• AI-чат — безлимит сообщений\n"
         "• Примеры ответов других участников\n"
-        "• AI подбор ситуаций\n"
-        "• Кастомные шаблоны\n"
+        "• «Помоги найти ситуацию» — AI подбирает под тебя\n"
+        "• Кастомные шаблоны ответов\n"
+        "• Пошаговое заполнение с AI\n"
         "• Расширенный профиль\n"
-        "• Ежедневная сводка и архив\n\n"
-        "🎁 Пробный период: 7 дней Premium бесплатно\n\n"
+        "• Ежедневная сводка\n"
+        "• Архив благодарностей\n"
+        "• Настройка напоминаний\n\n"
+        "━━━━━━━━━━━━━━━\n\n"
+        "🎁 *Пробный период:* 7 дней Premium бесплатно\n\n"
         "После окончания подписки аккаунт переходит\n"
-        "в Free — ничего не теряется."
+        "в Free — всё сохраняется, программа работает."
     )
-    await message.answer(text, reply_markup=build_subscription_menu_markup(), parse_mode="Markdown")
+    await message.answer(text, reply_markup=build_tariffs_menu_markup(), parse_mode="Markdown")
 
 async def handle_root_callback(callback: CallbackQuery, state: FSMContext) -> None:
     data = callback.data
@@ -146,40 +153,8 @@ async def handle_root_callback(callback: CallbackQuery, state: FSMContext) -> No
         return
     await callback.answer()
 
-async def handle_subscription_callback(callback: CallbackQuery, state: FSMContext) -> None:
-    data = callback.data
-    if data == "sub_status":
-        text = (
-            "📊 *Статус подписки*\n"
-            "━━━━━━━━━━━━━━━\n\n"
-            "📌 Тариф: *Free*\n"
-            "♾ Срок: бессрочно\n\n"
-            "Все базовые функции доступны."
-        )
-        await callback.message.edit_text(
-            text,
-            reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="◀️ Назад", callback_data="sub_back")],
-            ]),
-            parse_mode="Markdown",
-        )
-        await callback.answer()
-        return
-    if data == "sub_subscribe":
-        await callback.answer("🕐 Оформление подписки — в разработке", show_alert=True)
-        return
-    if data == "sub_extend":
-        await callback.answer("🕐 Продление подписки — в разработке", show_alert=True)
-        return
-    if data == "sub_cancel":
-        await callback.answer("🕐 Отмена подписки — в разработке", show_alert=True)
-        return
-    if data == "sub_back":
-        await callback.message.delete()
-        await handle_subscription(callback.message, state)
-        await callback.answer()
-        return
-    await callback.answer()
+async def handle_tariff_callback(callback: CallbackQuery, state: FSMContext) -> None:
+    await callback.answer("🕐 Premium в разработке — скоро будет доступен!", show_alert=True)
 
 async def handle_exit(message: Message, state: FSMContext) -> None:
     current_state = await state.get_state()
@@ -383,7 +358,7 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.message(F.text == "⚙️ Настройки")(handle_main_settings)
     dp.message(F.text == "📎 Инструкция")(handle_faq)
     dp.message(F.text == "📋 Меню")(handle_root_menu)
-    dp.message(F.text == "💎 Подписка")(handle_subscription)
+    dp.message(F.text == "💎 Тарифы")(handle_tariffs)
     dp.message(F.text == "❓ Помощь")(handle_faq)
 
     register_onboarding_handlers(dp)
@@ -437,7 +412,7 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.callback_query(F.data.startswith("feeling_"))(handle_feeling_selection_callback)
 
     dp.callback_query(F.data.startswith("faq_"))(handle_faq_callback)
-    dp.callback_query(F.data.startswith("sub_"))(handle_subscription_callback)
+    dp.callback_query(F.data.startswith("tariff_"))(handle_tariff_callback)
     dp.callback_query(F.data.startswith("root_"))(handle_root_callback)
 
     dp.message(Command(commands=["qa_last"]))(qa_last)

@@ -31,7 +31,7 @@ def build_main_menu_markup() -> ReplyKeyboardMarkup:
         keyboard=[
             [
                 KeyboardButton(text="📋 Меню"),
-                KeyboardButton(text="💎 Подписка"),
+                KeyboardButton(text="💎 Тарифы"),
                 KeyboardButton(text="❓ Помощь"),
             ],
         ],
@@ -50,13 +50,11 @@ def build_root_menu_markup() -> InlineKeyboardMarkup:
     ])
 
 
-def build_subscription_menu_markup() -> InlineKeyboardMarkup:
+def build_tariffs_menu_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📊 Мой статус", callback_data="sub_status")],
-        [InlineKeyboardButton(text="🕐 Оформить подписку", callback_data="sub_subscribe")],
-        [InlineKeyboardButton(text="🕐 Продлить подписку", callback_data="sub_extend")],
-        [InlineKeyboardButton(text="🕐 Отменить подписку", callback_data="sub_cancel")],
+        [InlineKeyboardButton(text="🕐 Premium — в разработке", callback_data="tariff_premium_soon")],
         [InlineKeyboardButton(text="📋 Открыть меню", callback_data="root_menu")],
+        [InlineKeyboardButton(text="❓ Помощь", callback_data="root_help")],
     ])
 
 

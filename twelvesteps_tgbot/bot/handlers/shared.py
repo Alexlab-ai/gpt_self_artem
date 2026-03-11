@@ -31,7 +31,7 @@ from bot.config import (
     build_exit_markup,
     build_main_menu_markup,
     build_root_menu_markup,
-    build_subscription_menu_markup,
+    build_tariffs_menu_markup,
     build_error_markup,
     format_step_progress_indicator,
     build_profile_sections_markup,
