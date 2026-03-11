@@ -59,14 +59,39 @@ async def handle_root_menu(message: Message, state: FSMContext) -> None:
 
 async def handle_tariffs(message: Message, state: FSMContext) -> None:
     text = (
-        "💎 Тарифы\n\n"
-        "Здесь логично держать всё про доступ и планы:\n"
-        "• Free — базовый доступ\n"
-        "• Pro — больше лимитов и глубины\n"
-        "• Ultra — максимум возможностей\n\n"
-        "Пока это можно использовать как экран с описанием планов и оплатой."
+        "💎 *Тарифы*\n"
+        "━━━━━━━━━━━━━━━\n\n"
+        "🆓 *FREE — 0 ₽ / навсегда*\n\n"
+        "Полноценная работа по программе:\n"
+        "• Все 12 шагов — вопросы, ответы, черновики\n"
+        "• Ежедневный самоанализ — 10 вопросов\n"
+        "• Колесо чувств — все категории\n"
+        "• Благодарности — без лимита\n"
+        "• Профиль — стандартные секции\n"
+        "• Прогресс по шагам\n"
+        "• SOS — кризисная помощь\n"
+        "• AI-чат — до 5 сообщений в день\n\n"
+        "━━━━━━━━━━━━━━━\n\n"
+        "⭐ *PREMIUM*\n\n"
+        "│  1 мес  —  490 ₽   (490 ₽/мес)\n"
+        "│  3 мес  —  1 290 ₽  (430 ₽/мес)  ✦ Лучший выбор\n"
+        "│  12 мес —  3 990 ₽  (333 ₽/мес)\n\n"
+        "Всё из Free, плюс:\n"
+        "• AI-чат — безлимит сообщений\n"
+        "• Примеры ответов других участников\n"
+        "• «Помоги найти ситуацию» — AI подбирает под тебя\n"
+        "• Кастомные шаблоны ответов\n"
+        "• Пошаговое заполнение с AI\n"
+        "• Расширенный профиль\n"
+        "• Ежедневная сводка\n"
+        "• Архив благодарностей\n"
+        "• Настройка напоминаний\n\n"
+        "━━━━━━━━━━━━━━━\n\n"
+        "🎁 *Пробный период:* 7 дней Premium бесплатно\n\n"
+        "После окончания подписки аккаунт переходит\n"
+        "в Free — всё сохраняется, программа работает."
     )
-    await message.answer(text, reply_markup=build_tariffs_menu_markup())
+    await message.answer(text, reply_markup=build_tariffs_menu_markup(), parse_mode="Markdown")
 
 async def handle_root_callback(callback: CallbackQuery, state: FSMContext) -> None:
     data = callback.data
@@ -127,6 +152,9 @@ async def handle_root_callback(callback: CallbackQuery, state: FSMContext) -> No
         await handle_thanks_menu(callback.message, state)
         return
     await callback.answer()
+
+async def handle_tariff_callback(callback: CallbackQuery, state: FSMContext) -> None:
+    await callback.answer("🕐 Premium в разработке — скоро будет доступен!", show_alert=True)
 
 async def handle_exit(message: Message, state: FSMContext) -> None:
     current_state = await state.get_state()
@@ -384,6 +412,7 @@ def register_handlers(dp: Dispatcher) -> None:
     dp.callback_query(F.data.startswith("feeling_"))(handle_feeling_selection_callback)
 
     dp.callback_query(F.data.startswith("faq_"))(handle_faq_callback)
+    dp.callback_query(F.data.startswith("tariff_"))(handle_tariff_callback)
     dp.callback_query(F.data.startswith("root_"))(handle_root_callback)
 
     dp.message(Command(commands=["qa_last"]))(qa_last)
