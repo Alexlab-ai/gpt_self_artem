@@ -523,7 +523,7 @@ async def handle_progress_callback(callback: CallbackQuery, state: FSMContext) -
             steps = steps_list.get("steps", []) if steps_list else []
 
             await callback.message.edit_text(
-                "📋 Мой прогресс",
+                "📋 Мой прогресс\n\nВыбери шаг, чтобы посмотреть свои ответы.",
                 reply_markup=build_progress_main_markup(steps)
             )
         except Exception as e:
@@ -585,7 +585,7 @@ async def handle_progress_callback(callback: CallbackQuery, state: FSMContext) -
                 steps_list = await BACKEND_CLIENT.get_steps_list(token)
                 steps = steps_list.get("steps", []) if steps_list else []
                 await callback.message.edit_text(
-                    "📋 Мой прогресс",
+                    "📋 Мой прогресс\n\nВыбери шаг, чтобы посмотреть свои ответы.",
                     reply_markup=build_progress_main_markup(steps)
                 )
             except Exception as e:
@@ -1252,7 +1252,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             steps = steps_list.get("steps", []) if steps_list else []
 
             await callback.message.edit_text(
-                "📋 Мой прогресс",
+                "📋 Мой прогресс\n\nВыбери шаг, чтобы посмотреть свои ответы.",
                 reply_markup=build_progress_main_markup(steps)
             )
             await callback.answer()
