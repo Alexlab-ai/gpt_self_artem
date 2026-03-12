@@ -670,6 +670,22 @@ def _clean_step_title(title: str) -> str:
     return title
 
 
+STEP_ICONS = {
+    1: "🏳️",     # Бессилие — белый флаг
+    2: "🌱",     # Вера — росток
+    3: "🤲",     # Решение довериться
+    4: "🔍",     # Инвентаризация
+    5: "🪞",     # Признание — зеркало
+    6: "🧹",     # Готовность к очищению
+    7: "🙏",     # Смирение
+    8: "📋",     # Список людей
+    9: "🤝",     # Возмещение ущерба
+    10: "📝",    # Ежедневный самоанализ
+    11: "🕊️",    # Молитва и медитация
+    12: "💡",    # Духовное пробуждение
+}
+
+
 def build_progress_main_markup(steps: list[dict]) -> InlineKeyboardMarkup:
     """Main progress menu - shows steps with progress info."""
     buttons = []
@@ -684,15 +700,18 @@ def build_progress_main_markup(steps: list[dict]) -> InlineKeyboardMarkup:
             continue
 
         if total > 0 and answered >= total:
-            emoji = "✅"
+            status = "✅"
         elif answered and answered > 0:
-            emoji = "⏳"
+            status = "⏳"
         else:
-            emoji = "⬜"
+            status = ""
 
-        label = f"{emoji} Шаг {step_number}"
+        icon = STEP_ICONS.get(step_number, "📌")
+        label = f"{icon} Шаг {step_number}"
         if total > 0:
             label += f"  ({answered}/{total})"
+        if status:
+            label += f" {status}"
 
         buttons.append([InlineKeyboardButton(
             text=label,
