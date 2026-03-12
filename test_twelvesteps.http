@@ -1,0 +1,92 @@
+### =============================================
+###  ЮKASSA PAYMENT API — ТЕСТЫ (VS Code REST Client)
+### =============================================
+### Инструкция:
+### 1. Установи расширение "REST Client" в VS Code
+### 2. Замени @token на реальный токен пользователя (api_key из таблицы users)
+### 3. После первого запроса /create вставь payment.id в переменную @payment_id
+### 4. Нажимай "Send Request" над каждым запросом
+
+@host = https://twelvesteps-backend.onrender.com
+@token = 
+@payment_id = 
+@bot_nickname = mafioznikos_bot
+
+### =============================================
+### 1. Создать платёж — Monthly (990 ₽)
+### =============================================
+POST {{host}}/payment/yookassa/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": 990,
+  "description": "Подписка GPT-SELF — monthly",
+  "plan_type": "monthly",
+  "return_url": "https://t.me/{{bot_nickname}}"
+}
+
+### =============================================
+### 2. Создать платёж — Yearly (2990 ₽)
+### =============================================
+POST {{host}}/payment/yookassa/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": 2990,
+  "description": "Подписка GPT-SELF — yearly",
+  "plan_type": "yearly",
+  "return_url": "https://t.me/{{bot_nickname}}"
+}
+
+### =============================================
+### 3. Создать платёж — 3 месяца (2490 ₽)
+### =============================================
+POST {{host}}/payment/yookassa/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": 2490,
+  "description": "Подписка GPT-SELF — 3 месяца",
+  "plan_type": "3_months",
+  "return_url": "https://t.me/{{bot_nickname}}"
+}
+
+### =============================================
+### 4. Проверить статус платежа
+### =============================================
+GET {{host}}/payment/yookassa/status/{{payment_id}}
+Authorization: Bearer {{token}}
+
+### =============================================
+### 5. Симуляция Webhook от ЮKassa (для ручного теста)
+### =============================================
+# POST {{host}}/payment/yookassa/webhook
+# Content-Type: application/json
+# X-Yookassa-Signature: test-signature-123   # подпись не проверяется в тесте
+
+# {
+#   "type": "notification",
+#   "event": "payment.succeeded",
+#   "object": {
+#     "id": "{{payment_id}}",
+#     "status": "succeeded",
+#     "paid": true,
+#     "amount": { "value": "990.00", "currency": "RUB" },
+#     "metadata": {
+#       "user_id": "123",
+#       "plan_type": "monthly"
+#     }
+#   }
+# }
+
+### =============================================
+### Полезные советы:
+### • Что бы получить @token 
+### • Зайди в Render Dashboard → твоя БД (PostgreSQL) → Query Editor
+### • Выполни запрос: SELECT api_key FROM users LIMIT 1;
+### • После /create скопируй "confirmation_url" из ответа и открой в браузере
+### • После оплаты скопируй payment.id и вставь в переменную @payment_id сверху
+### • Для реального webhook используй ngrok + тестовый магазин ЮKassa
