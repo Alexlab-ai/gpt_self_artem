@@ -974,19 +974,26 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                         answered_questions=step_info.get("answered_questions", 0),
                         total_questions=step_info.get("total_questions", 0)
                     )
-                    full_text = f"{progress_indicator}\n\n{response_text}"
+
+                    # Check if there's a draft — show answer mode buttons
+                    draft_data = await BACKEND_CLIENT.get_draft(token)
+                    has_draft = draft_data and draft_data.get("success") and draft_data.get("draft")
+
+                    if has_draft:
+                        draft_preview = draft_data["draft"][:100]
+                        full_text = f"{progress_indicator}\n\n{response_text}\n\nЧерновик: {draft_preview}{'...' if len(draft_data['draft']) > 100 else ''}"
+                        markup = build_step_answer_mode_markup()
+                    else:
+                        full_text = f"{progress_indicator}\n\n{response_text}"
+                        markup = build_step_answer_mode_markup()
 
                     await state.update_data(
                         step_description=step_info.get("step_description", ""),
                         nav_level="question",
                     )
 
-                    await edit_long_message(
-                        callback,
-                        full_text,
-                        reply_markup=build_step_actions_markup()
-                    )
-                    await state.set_state(StepState.answering)
+                    await edit_long_message(callback, full_text, reply_markup=markup)
+                    await state.set_state(StepState.answer_mode)
                     await callback.answer()
             return
 
@@ -1202,6 +1209,62 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             return
 
         if data == "step_complete":
+            # Check if draft exists — if so, submit it as the answer directly
+            draft_data = await BACKEND_CLIENT.get_draft(token)
+            existing_draft = ""
+            if draft_data and draft_data.get("success"):
+                existing_draft = draft_data.get("draft") or ""
+
+            if existing_draft.strip():
+                # Submit draft as answer
+                step_next = await process_step_message(
+                    telegram_id=telegram_id,
+                    text=existing_draft,
+                    username=username,
+                    first_name=first_name
+                )
+
+                if not step_next:
+                    await callback.answer("Сессия потеряна. Нажми /steps снова.")
+                    await state.clear()
+                    return
+
+                if step_next.get("error"):
+                    error_message = step_next.get("message", "Ошибка валидации")
+                    await callback.message.edit_text(
+                        f"{error_message}\n\nДополни ответ и попробуй снова.",
+                        reply_markup=build_step_answer_mode_markup()
+                    )
+                    await callback.answer()
+                    return
+
+                step_info = await BACKEND_CLIENT.get_current_step_info(token)
+                response_text = step_next.get("message", "")
+                is_completed = step_next.get("is_completed", False)
+
+                if step_info and step_info.get("step_number"):
+                    progress_indicator = format_step_progress_indicator(
+                        step_number=step_info.get("step_number", 0),
+                        total_steps=step_info.get("total_steps", 12),
+                        step_title=step_info.get("step_title"),
+                        answered_questions=step_info.get("answered_questions", 0),
+                        total_questions=step_info.get("total_questions", 0)
+                    )
+                    full_text = f"{progress_indicator}\n\n{response_text}"
+                else:
+                    full_text = response_text
+
+                await state.update_data(action=None, current_draft="", step_description=step_info.get("step_description", "") if step_info else "")
+                await callback.message.edit_text(full_text, reply_markup=build_step_actions_markup())
+                await state.set_state(StepState.answering)
+                await callback.answer()
+
+                if is_completed:
+                    await callback.message.answer("Этап завершен! 🎉", reply_markup=build_main_menu_markup())
+                    await state.clear()
+                return
+
+            # No draft — ask user to type answer
             await state.update_data(action="complete")
             step_data = await get_current_step_question(telegram_id, username, first_name)
             current_question_text = step_data.get("message", "") if step_data else ""
