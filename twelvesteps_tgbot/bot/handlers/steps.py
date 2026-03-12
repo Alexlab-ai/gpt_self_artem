@@ -992,6 +992,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
 
         if data == "step_save_draft":
             draft_data = await BACKEND_CLIENT.get_draft(token)
+            logger.info("step_save_draft: draft_data=%s", draft_data)
             existing_draft = ""
             if draft_data and draft_data.get("success"):
                 draft_value = draft_data.get("draft")
@@ -1015,6 +1016,8 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
 
             if existing_draft:
                 draft_text += f"Черновик: {existing_draft[:200]}{'...' if len(existing_draft) > 200 else ''}\n\n"
+            else:
+                draft_text += "Черновика пока нет.\n\n"
             draft_text += "Напиши ответ:"
 
             await state.update_data(action="save_draft")
