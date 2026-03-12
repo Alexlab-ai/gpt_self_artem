@@ -958,6 +958,9 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                 return
 
         if data == "step_back_from_answer":
+            # Clear action state to prevent stale "save_draft" action
+            await state.update_data(action=None)
+
             step_info = await BACKEND_CLIENT.get_current_step_info(token)
             if not step_info:
                 await callback.answer("Не удалось получить информацию о шаге")
@@ -975,25 +978,24 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                         total_questions=step_info.get("total_questions", 0)
                     )
 
-                    # Check if there's a draft — show answer mode buttons
+                    # Check if there's a draft
                     draft_data = await BACKEND_CLIENT.get_draft(token)
                     has_draft = draft_data and draft_data.get("success") and draft_data.get("draft")
 
                     if has_draft:
                         draft_preview = draft_data["draft"][:100]
                         full_text = f"{progress_indicator}\n\n{response_text}\n\nЧерновик: {draft_preview}{'...' if len(draft_data['draft']) > 100 else ''}"
-                        markup = build_step_answer_mode_markup()
                     else:
                         full_text = f"{progress_indicator}\n\n{response_text}"
-                        markup = build_step_answer_mode_markup()
 
+                    # Navigate back to step actions screen (not answer_mode loop)
                     await state.update_data(
                         step_description=step_info.get("step_description", ""),
                         nav_level="question",
                     )
 
-                    await edit_long_message(callback, full_text, reply_markup=markup)
-                    await state.set_state(StepState.answer_mode)
+                    await edit_long_message(callback, full_text, reply_markup=build_step_actions_markup())
+                    await state.set_state(StepState.answering)
                     await callback.answer()
             return
 
