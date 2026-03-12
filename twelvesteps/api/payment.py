@@ -2,7 +2,7 @@ import os
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from typing import Optional
 
-from api.dependencies import CurrentUserContext, get_current_user
+from api.dependencies import CurrentUserContext, get_current_user, get_db, get_db_session
 from api.schemas import (
     YookassaPaymentCreateRequest,
     YookassaPaymentResponse,
@@ -31,7 +31,7 @@ async def create_yookassa_payment(
         
         result = await service.create_payment(
             amount      = payload.amount,
-            description = payload.description or f"Подписка 12 шагов — {payload.plan_type}",
+            description = payload.description or f"Подписка на GPT-SELF — {payload.plan_type}",
             user_id     = current_context.user.id,
             return_url  = return_url,
             metadata    = {"plan_type": payload.plan_type}
@@ -90,23 +90,22 @@ async def yookassa_webhook(
 
         user_id = int(user_id_str)
 
-        # ────────────────────────────────────────────────
         # Работа с подпиской
-        # ────────────────────────────────────────────────
         from repositories.SubscriptionRepository import SubscriptionRepository
         from datetime import datetime, timedelta
         from sqlalchemy.ext.asyncio import AsyncSession
 
-        # Получаем сессию (зависит от того, как у вас настроен fastapi)
-        # Вариант 1: если сессия уже в app.state (как в твоём примере)
-        session: AsyncSession = request.app.state.session
+        # Получаем сессию
+        
+        session: AsyncSession = Depends(get_db_session)
 
-        # Вариант 2 (лучше): внедрить через Depends, но для простоты пока так
         sub_repo = SubscriptionRepository(session)
 
         # Определяем длительность подписки
         if plan_type == "yearly":
             duration_days = 365
+        elif plan_type == "3_months":
+            duration_days = 90
         else:
             duration_days = 30   # monthly по умолчанию
 
@@ -116,11 +115,14 @@ async def yookassa_webhook(
         # Пытаемся найти существующую подписку
         existing_sub = await sub_repo.get_by_user_id(user_id)
 
+        # Если оплата прошла успешно, значит это premium, если нет значит это free
+        plan_str = "premium" 
+
         if existing_sub:
 
             # Продлеваем существующую подписку
             existing_sub.status           = "active" # active, expired, cancelled
-            existing_sub.plan             = "premium" if "premium" in plan_type else plan_type # free, premium
+            existing_sub.plan             = plan_str
             existing_sub.expires_at       = expires
             existing_sub.payment_provider = "yookassa" # yookassa, cryptomus
             existing_sub.payment_id       = payment_id
@@ -134,7 +136,7 @@ async def yookassa_webhook(
             new_sub = await sub_repo.create(
                 user_id          = user_id,
                 status           = "active",
-                plan             = "premium" if "premium" in plan_type else plan_type,
+                plan             = plan_str,
                 started_at       = now,
                 expires_at       = expires,
                 payment_provider = "yookassa",
