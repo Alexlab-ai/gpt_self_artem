@@ -708,8 +708,6 @@ def build_progress_main_markup(steps: list[dict]) -> InlineKeyboardMarkup:
 
         icon = STEP_ICONS.get(step_number, "📌")
         label = f"{icon} Шаг {step_number}"
-        if total > 0:
-            label += f"  ({answered}/{total})"
         if status:
             label += f" {status}"
 
@@ -781,19 +779,8 @@ def build_progress_view_answers_questions_markup(questions: list[dict], step_id:
         for g in range(num_groups):
             start = g * GROUP_SIZE + 1
             end = min((g + 1) * GROUP_SIZE, total)
-            answered_in_group = sum(
-                1 for q in questions[g*GROUP_SIZE:(g+1)*GROUP_SIZE]
-                if q.get("status") == "COMPLETED"
-            )
-            group_total = end - start + 1
-            if group_total > 0 and answered_in_group >= group_total:
-                group_emoji = "✅"
-            elif answered_in_group > 0:
-                group_emoji = "⏳"
-            else:
-                group_emoji = "⬜"
             buttons.append([InlineKeyboardButton(
-                text=f"📦 Вопросы {start}–{end}  ({answered_in_group}/{group_total} {group_emoji})",
+                text=f"Вопросы {start}–{end}",
                 callback_data=f"progress_qgroup_{step_id}_{g}"
             )])
 

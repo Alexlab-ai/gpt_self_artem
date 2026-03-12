@@ -518,12 +518,12 @@ async def handle_progress_callback(callback: CallbackQuery, state: FSMContext) -
         await callback.answer("Ошибка авторизации")
         return
 
+    logger.info("handle_progress_callback: data=%s, user=%s", data, telegram_id)
+
     if data == "progress_main" or data == "step_progress":
         try:
             steps_list = await BACKEND_CLIENT.get_steps_list(token)
             steps = steps_list.get("steps", []) if steps_list else []
-            logger.info("progress_main: steps_list raw=%s", steps_list)
-            logger.info("progress_main: first step sample=%s", steps[0] if steps else "empty")
 
             await callback.message.edit_text(
                 "📋 Мой прогресс\n\nВыбери шаг, чтобы посмотреть свои ответы.",
