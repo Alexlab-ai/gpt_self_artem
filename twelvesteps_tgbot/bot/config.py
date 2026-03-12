@@ -468,7 +468,7 @@ def build_step_answer_mode_markup() -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="🔄 Сбросить", callback_data="step_reset_draft")
         ],
         [
-            InlineKeyboardButton(text="✅ Сохранить и далее", callback_data="step_complete")
+            InlineKeyboardButton(text="✔️ Сохранить и далее", callback_data="step_complete")
         ],
         [InlineKeyboardButton(text="◀️ Назад", callback_data="step_back_from_answer")]
     ])
