@@ -11,7 +11,7 @@ from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from bot.storage import JsonFileStorage
+from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.exceptions import TelegramConflictError
 
 from bot.config import BOT_TOKEN
@@ -65,7 +65,7 @@ async def main() -> None:
     port = int(os.environ.get("PORT", 10000))
 
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    dp = Dispatcher(storage=JsonFileStorage("data/fsm_states.json"))
+    dp = Dispatcher(storage=MemoryStorage())
     register_handlers(dp)
 
     app = web.Application()

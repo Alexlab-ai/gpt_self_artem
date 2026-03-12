@@ -123,30 +123,6 @@ class AboutMeStates(StatesGroup):
     adding_entry = State()
 
 
-async def auto_save_step_draft(telegram_id: int, username, first_name, state) -> None:
-    """Auto-save step draft from FSM data before clearing state.
-
-    Call this before state.clear() when switching away from StepState.
-    """
-    try:
-        current_state = await state.get_state()
-        if current_state not in (
-            StepState.answering, StepState.answer_mode,
-            StepState.filling_template, StepState.template_field,
-        ):
-            return
-
-        state_data = await state.get_data()
-        draft = state_data.get("current_draft", "")
-        if draft and draft.strip():
-            token = await get_or_fetch_token(telegram_id, username, first_name)
-            if token:
-                await BACKEND_CLIENT.save_draft(token, draft.strip())
-                logger.info(f"Auto-saved draft for user {telegram_id} before section switch")
-    except Exception as e:
-        logger.warning(f"Failed to auto-save draft for user {telegram_id}: {e}")
-
-
 def _clean_section_title(name: str, icon: str = "") -> str:
     """Build display title from section name and icon.
 
