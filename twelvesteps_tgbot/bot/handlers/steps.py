@@ -1010,15 +1010,12 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             ) if step_info else ""
 
             draft_text = f"{progress_indicator}\n\n" if progress_indicator else ""
-            draft_text += "💾 Сохранить черновик\n\n"
             if current_question_text:
                 draft_text += f"{current_question_text}\n\n"
 
             if existing_draft:
-                draft_text += f"📝 Текущий черновик:\n{existing_draft[:200]}{'...' if len(existing_draft) > 200 else ''}\n\n"
-                draft_text += "Введи новый текст черновика или отправь текущий для сохранения:"
-            else:
-                draft_text += "Введи текст черновика и отправь его:"
+                draft_text += f"Черновик: {existing_draft[:200]}{'...' if len(existing_draft) > 200 else ''}\n\n"
+            draft_text += "Напиши ответ:"
 
             await state.update_data(action="save_draft")
             draft_markup = InlineKeyboardMarkup(inline_keyboard=[
@@ -1161,11 +1158,10 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             ) if step_info else ""
 
             draft_text = f"{progress_indicator}\n\n" if progress_indicator else ""
-            draft_text += "📝 Просмотр черновика\n\n"
             if current_question_text:
                 draft_text += f"{current_question_text}\n\n"
-            draft_text += f"💾 Текущий черновик:\n{existing_draft}\n\n"
-            draft_text += "Введи новый текст для обновления черновика или отправь текущий для сохранения:"
+            draft_text += f"Черновик: {existing_draft}\n\n"
+            draft_text += "Напиши ответ:"
 
             await state.update_data(action="save_draft", current_draft=existing_draft)
             draft_markup = InlineKeyboardMarkup(inline_keyboard=[
