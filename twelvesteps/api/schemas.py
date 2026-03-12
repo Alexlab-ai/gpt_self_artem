@@ -113,10 +113,17 @@ class StepQuestionItem(BaseModel):
     id: int
     text: str
 
+class StepInfo(BaseModel):
+    """Step summary info returned alongside questions"""
+    id: int
+    number: int
+    title: str = ""
+
 class StepQuestionsResponse(BaseModel):
     """List of questions for a step"""
     step_id: int
     step_number: int
+    step: Optional[StepInfo] = None
     questions: list[StepQuestionItem] = Field(default_factory=list)
 
 class DraftRequest(BaseModel):

@@ -31,6 +31,7 @@ from api.schemas import (
     StepListResponse,
     StepQuestionsResponse,
     StepQuestionItem,
+    StepInfo,
     DraftRequest,
     DraftResponse,
     PreviousAnswerResponse,
@@ -377,6 +378,7 @@ async def get_current_step_questions(
         response_dict = {
             "step_id": step_id_int,
             "step_number": step_number,
+            "step": {"id": step_id_int, "number": step_number, "title": step.title or ""},
             "questions": questions_list
         }
 
@@ -423,6 +425,7 @@ async def get_step_questions(
     return StepQuestionsResponse(
         step_id=step_id,
         step_number=step_number,
+        step=StepInfo(id=step.id, number=step_number, title=step.title or ""),
         questions=question_items
     )
 
