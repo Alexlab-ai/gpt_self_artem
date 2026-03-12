@@ -32,6 +32,7 @@ from bot.config import (
     build_settings_questions_list_markup,
     build_settings_select_step_for_question_markup,
     build_questions_group_markup,
+    _clean_step_title,
 )
 from bot.utils import send_long_message, edit_long_message
 from .shared import StepState, MAIN_MENU_TEXT, logger
@@ -543,7 +544,7 @@ async def handle_progress_callback(callback: CallbackQuery, state: FSMContext) -
             step_info = questions_data.get("step", {}) if questions_data else {}
 
             step_number = step_info.get("number", step_id)
-            step_title = step_info.get("title", "")
+            step_title = _clean_step_title(step_info.get("title", ""))
 
             await state.update_data(progress_view_step_id=step_id)
 
@@ -571,7 +572,7 @@ async def handle_progress_callback(callback: CallbackQuery, state: FSMContext) -
                 step_info = questions_data.get("step", {}) if questions_data else {}
 
                 step_number = step_info.get("number", step_id)
-                step_title = step_info.get("title", "")
+                step_title = _clean_step_title(step_info.get("title", ""))
 
                 await state.update_data(progress_view_step_id=step_id)
 

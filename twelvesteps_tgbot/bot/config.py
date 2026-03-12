@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import List, Optional, Dict, Any
 
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
@@ -659,6 +660,14 @@ def build_progress_step_markup(step_id: int, step_number: int, step_title: str) 
     ])
 
 
+
+
+def _clean_step_title(title: str) -> str:
+    """Strip 'ШАГ ПЕРВЫЙ:' prefix and trim long titles."""
+    title = re.sub(r"^ШАГ\s+\S+:\s*", "", title, flags=re.IGNORECASE)
+    if len(title) > 50:
+        title = title[:47] + "..."
+    return title
 
 
 def build_progress_main_markup(steps: list[dict]) -> InlineKeyboardMarkup:
