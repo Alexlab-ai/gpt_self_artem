@@ -439,7 +439,11 @@ def format_step_progress_indicator(step_number, total_steps, step_title=None, an
     return header
 
 
-def build_step_actions_markup(**kwargs) -> InlineKeyboardMarkup:
+def build_step_actions_markup(show_description: bool = False, **kwargs) -> InlineKeyboardMarkup:
+    if show_description:
+        desc_btn = InlineKeyboardButton(text="🔽 Свернуть описание", callback_data="step_hide_description")
+    else:
+        desc_btn = InlineKeyboardButton(text="🧾 Описание шага", callback_data="step_show_description")
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="▶️ Продолжить", callback_data="step_continue"),
@@ -449,10 +453,8 @@ def build_step_actions_markup(**kwargs) -> InlineKeyboardMarkup:
             InlineKeyboardButton(text="🧭 Помощь", callback_data="sos_help"),
             InlineKeyboardButton(text="⏸ Сохранить", callback_data="step_save_draft"),
         ],
-        [
-            InlineKeyboardButton(text="📖 Подробнее о шаге", callback_data="step_show_description"),
-            InlineKeyboardButton(text="🏠 Меню", callback_data="steps_to_main"),
-        ],
+        [desc_btn],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="steps_back")],
     ])
 
 
@@ -572,10 +574,9 @@ def build_step_settings_markup() -> InlineKeyboardMarkup:
 def build_profile_settings_markup() -> InlineKeyboardMarkup:
     """Profile settings menu (simplified)."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📋 Информация обо мне", callback_data="profile_settings_info"),
-         InlineKeyboardButton(text="👣 Мини-опрос", callback_data="profile_settings_survey")],
-        [InlineKeyboardButton(text="📋 Меню", callback_data="root_menu"),
-         InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_back")]
+        [InlineKeyboardButton(text="📋 Информация обо мне", callback_data="profile_settings_info")],
+        [InlineKeyboardButton(text="👣 Пройти мини-опрос", callback_data="profile_settings_survey")],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_back")]
     ])
 
 
