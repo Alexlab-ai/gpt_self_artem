@@ -6,4 +6,5 @@ docs/
 .cursorignore
 __pycache__/
 *.pyc
+data/
 !plan.md

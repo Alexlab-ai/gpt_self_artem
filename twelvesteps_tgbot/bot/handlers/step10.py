@@ -5,7 +5,7 @@ from aiogram.exceptions import TelegramBadRequest
 from bot.backend import BACKEND_CLIENT, get_or_fetch_token
 from bot.config import build_error_markup, build_main_menu_markup
 from bot.utils import send_long_message
-from .shared import Step10States, StepState, MAIN_MENU_TEXT, logger
+from .shared import Step10States, StepState, MAIN_MENU_TEXT, auto_save_step_draft, logger
 
 async def handle_day(message: Message, state: FSMContext) -> None:
     telegram_id = message.from_user.id
@@ -14,6 +14,7 @@ async def handle_day(message: Message, state: FSMContext) -> None:
 
     current_state = await state.get_state()
     if current_state == StepState.answering or current_state == StepState.filling_template:
+        await auto_save_step_draft(telegram_id, username, first_name, state)
         await state.clear()
         logger.info(f"Cleared step state for user {telegram_id} when switching to /day")
 
@@ -151,6 +152,22 @@ async def handle_step10_callback(callback: CallbackQuery, state: FSMContext) -> 
 
     try:
         await callback.answer()
+
+        if data == "step10_back":
+            token = await get_or_fetch_token(telegram_id, username, first_name)
+            if token:
+                try:
+                    await BACKEND_CLIENT.pause_step10_analysis(token)
+                except Exception:
+                    pass
+
+            await state.clear()
+            try:
+                await callback.message.delete()
+            except Exception:
+                pass
+            await callback.message.answer(MAIN_MENU_TEXT, reply_markup=build_main_menu_markup())
+            return
 
         if data == "step10_pause":
             token = await get_or_fetch_token(telegram_id, username, first_name)

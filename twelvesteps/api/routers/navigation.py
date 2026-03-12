@@ -446,6 +446,8 @@ async def submit_answer(
             detail=error_message or "No active question found to answer. Please call /steps/next first."
         )
 
+    await current_context.session.commit()
+
     return {"status": "success", "message": "Answer saved."}
 
 @router.post("/steps/draft", response_model=DraftResponse)
@@ -468,6 +470,8 @@ async def save_draft(
             status_code=400,
             detail="No active question found to save draft."
         )
+
+    await current_context.session.commit()
 
     return DraftResponse(success=True, draft=draft_data.draft_text)
 
