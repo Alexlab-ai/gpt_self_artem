@@ -763,13 +763,11 @@ def build_progress_view_answers_questions_markup(questions: list[dict], step_id:
                         continue
                     status = q.get("status", "")
                     if status == "COMPLETED":
-                        emoji = "✅"
-                    elif status == "IN_PROGRESS" or q.get("answer_preview"):
-                        emoji = "⏳"
+                        label = f"✅ {q_number}"
                     else:
-                        emoji = "⬜"
+                        label = f"{q_number}"
                     row.append(InlineKeyboardButton(
-                        text=f"{emoji} {q_number}",
+                        text=label,
                         callback_data=f"progress_answers_question_{q_id}"
                     ))
             if row:
@@ -806,13 +804,11 @@ def build_progress_questions_group_markup(questions: list[dict], step_id: int, g
                     continue
                 status = q.get("status", "")
                 if status == "COMPLETED":
-                    emoji = "✅"
-                elif status == "IN_PROGRESS" or q.get("answer_preview"):
-                    emoji = "⏳"
+                    label = f"✅ {q_number}"
                 else:
-                    emoji = "⬜"
+                    label = f"{q_number}"
                 row.append(InlineKeyboardButton(
-                    text=f"{emoji} {q_number}",
+                    text=label,
                     callback_data=f"progress_answers_question_{q_id}"
                 ))
         if row:
