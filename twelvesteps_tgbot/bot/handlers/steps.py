@@ -522,15 +522,24 @@ async def handle_progress_callback(callback: CallbackQuery, state: FSMContext) -
 
     if data == "progress_main" or data == "step_progress":
         try:
+            logger.info("progress_main: fetching steps for user %s", telegram_id)
             steps_list = await BACKEND_CLIENT.get_steps_list(token)
             steps = steps_list.get("steps", []) if steps_list else []
+            logger.info("progress_main: got %d steps", len(steps))
 
-            await callback.message.edit_text(
-                "📋 Мой прогресс\n\nВыбери шаг, чтобы посмотреть свои ответы.",
-                reply_markup=build_progress_main_markup(steps)
-            )
+            try:
+                await callback.message.edit_text(
+                    "📋 Мой прогресс\n\nВыбери шаг, чтобы посмотреть свои ответы.",
+                    reply_markup=build_progress_main_markup(steps)
+                )
+            except TelegramBadRequest as e:
+                if "message is not modified" in str(e).lower():
+                    logger.debug("progress_main: message not modified")
+                else:
+                    logger.exception("progress_main: edit_text failed: %s", e)
+                    await callback.answer("Ошибка отображения")
         except Exception as e:
-            logger.exception("Error loading steps: %s", e)
+            logger.exception("progress_main: error loading steps: %s", e)
             await callback.answer("Ошибка загрузки")
         await callback.answer()
         return

@@ -452,7 +452,7 @@ def build_step_actions_markup(show_description: bool = False, **kwargs) -> Inlin
         ],
         [
             InlineKeyboardButton(text="🧭 Помощь", callback_data="sos_help"),
-            InlineKeyboardButton(text="⏸ Сохранить", callback_data="step_save_draft"),
+            InlineKeyboardButton(text="⏸ Черновик", callback_data="step_save_draft"),
         ],
         [desc_btn],
         [InlineKeyboardButton(text="◀️ Назад", callback_data="steps_back")],
@@ -463,12 +463,12 @@ def build_step_answer_mode_markup() -> InlineKeyboardMarkup:
     """Markup for answer mode with draft controls."""
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="💾 Сохранить", callback_data="step_save_draft"),
-            InlineKeyboardButton(text="✏️ Изменить", callback_data="step_edit_last"),
+            InlineKeyboardButton(text="💾 Черновик", callback_data="step_save_draft"),
+            InlineKeyboardButton(text="✏️ Измени...", callback_data="step_edit_last"),
             InlineKeyboardButton(text="🔄 Сбросить", callback_data="step_reset_draft")
         ],
         [
-            InlineKeyboardButton(text="✔️ Следующий вопрос", callback_data="step_complete")
+            InlineKeyboardButton(text="✅ Сохранить и далее", callback_data="step_complete")
         ],
         [InlineKeyboardButton(text="◀️ Назад", callback_data="step_back_from_answer")]
     ])
