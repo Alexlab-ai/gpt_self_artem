@@ -572,9 +572,10 @@ def build_step_settings_markup() -> InlineKeyboardMarkup:
 def build_profile_settings_markup() -> InlineKeyboardMarkup:
     """Profile settings menu (simplified)."""
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📋 Информация обо мне", callback_data="profile_settings_info")],
-        [InlineKeyboardButton(text="👣 Пройти мини-опрос", callback_data="profile_settings_survey")],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_back")]
+        [InlineKeyboardButton(text="📋 Информация обо мне", callback_data="profile_settings_info"),
+         InlineKeyboardButton(text="👣 Мини-опрос", callback_data="profile_settings_survey")],
+        [InlineKeyboardButton(text="📋 Меню", callback_data="root_menu"),
+         InlineKeyboardButton(text="◀️ Назад", callback_data="profile_settings_back")]
     ])
 
 
