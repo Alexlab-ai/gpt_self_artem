@@ -39,7 +39,6 @@ from .shared import (
     AboutMeStates,
     MAIN_MENU_TEXT,
     USER_LOGS,
-    auto_save_step_draft,
     logger,
 )
 from .steps import handle_steps, handle_about_step, handle_steps_settings, handle_step_answer, handle_step_answer_mode, handle_template_selection, handle_template_filling_callback, handle_steps_navigation_callback, handle_step_selection_callback, handle_question_view_callback, handle_step_action_callback, handle_progress_callback, handle_template_field_input, handle_steps_settings_callback, handle_questions_group_callback, handle_progress_questions_group_callback, handle_question_select_callback, handle_step_questions_list_callback
@@ -129,7 +128,6 @@ async def handle_root_callback(callback: CallbackQuery, state: FSMContext) -> No
         await handle_steps(callback.message, state)
         return
     if data == "root_day":
-        await auto_save_step_draft(callback.from_user.id, callback.from_user.username, callback.from_user.first_name, state)
         try:
             await callback.message.delete()
         except Exception:
@@ -138,7 +136,6 @@ async def handle_root_callback(callback: CallbackQuery, state: FSMContext) -> No
         await handle_day(callback.message, state)
         return
     if data == "root_feelings":
-        await auto_save_step_draft(callback.from_user.id, callback.from_user.username, callback.from_user.first_name, state)
         try:
             await callback.message.delete()
         except Exception:
@@ -147,7 +144,6 @@ async def handle_root_callback(callback: CallbackQuery, state: FSMContext) -> No
         await handle_feelings(callback.message, state)
         return
     if data == "root_thanks":
-        await auto_save_step_draft(callback.from_user.id, callback.from_user.username, callback.from_user.first_name, state)
         try:
             await callback.message.delete()
         except Exception:
@@ -163,7 +159,6 @@ async def handle_tariff_callback(callback: CallbackQuery, state: FSMContext) -> 
 async def handle_exit(message: Message, state: FSMContext) -> None:
     current_state = await state.get_state()
 
-    await auto_save_step_draft(message.from_user.id, message.from_user.username, message.from_user.first_name, state)
     await state.clear()
 
     if current_state == StepState.answering:
