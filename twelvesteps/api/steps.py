@@ -70,13 +70,36 @@ class StepFlowService:
             "status": current_user_step.status.value
         }
 
-    async def get_all_steps(self) -> list[dict]:
-        """Get list of all steps"""
+    async def get_all_steps(self, user_id: Optional[int] = None) -> list[dict]:
+        """Get list of all steps with optional progress info for a user"""
         stmt = select(Step).order_by(Step.index)
         result = await self.session.execute(stmt)
         steps = result.scalars().all()
 
-        return [{"id": s.id, "number": s.index} for s in steps]
+        items = []
+        for s in steps:
+            item = {"id": s.id, "number": s.index, "title": s.title or ""}
+
+            if user_id is not None:
+                stmt_total = select(func.count()).select_from(Question).where(
+                    Question.step_id == s.id
+                )
+                result_total = await self.session.execute(stmt_total)
+                total_questions = result_total.scalar() or 0
+
+                stmt_answered = select(func.count(func.distinct(StepAnswer.question_id))).select_from(StepAnswer).where(
+                    StepAnswer.user_id == user_id,
+                    StepAnswer.step_id == s.id
+                )
+                result_answered = await self.session.execute(stmt_answered)
+                answered_questions = result_answered.scalar() or 0
+
+                item["total_questions"] = total_questions
+                item["answered_questions"] = answered_questions
+
+            items.append(item)
+
+        return items
 
     async def get_step_questions(self, step_id: int) -> list[dict]:
         """Get list of questions for a step"""

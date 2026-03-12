@@ -296,7 +296,7 @@ async def get_all_steps(
 ):
     """Get list of all steps"""
     service = StepFlowService(current_context.session)
-    steps = await service.get_all_steps()
+    steps = await service.get_all_steps(user_id=current_context.user.id)
     return StepListResponse(steps=steps)
 
 @router.get("/steps/current/questions")
