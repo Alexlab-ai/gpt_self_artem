@@ -93,7 +93,7 @@ async def handle_root_callback(callback: CallbackQuery, state: FSMContext) -> No
         await callback.answer()
         return
     if data == "root_help":
-        await callback.message.edit_text("❓ Помощь\n\nВыбери раздел для просмотра:", reply_markup=build_faq_menu_markup())
+        await callback.message.edit_text("📎 Инструкция\n\nВыбери раздел:", reply_markup=build_faq_menu_markup())
         await callback.answer()
         return
     if data == "root_settings":
