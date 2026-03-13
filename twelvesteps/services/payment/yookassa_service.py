@@ -8,13 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from repositories.PaymentRepository import PaymentRepository
 
-TELEGRAM_BOT_NICKNAME = os.getenv("TELEGRAM_BOT_NICKNAME", "mafioznikos_bot")
-
 class YookassaService:
     def __init__(self):
 
-        self.shop_id    = os.getenv("YOOKASSA_SHOP_ID")
-        self.secret_key = os.getenv("YOOKASSA_SECRET_KEY")
+        self.bot_nickname = os.getenv("TELEGRAM_BOT_NICKNAME", "mafioznikos_bot")
+        self.shop_id      = os.getenv("YOOKASSA_SHOP_ID")
+        self.secret_key   = os.getenv("YOOKASSA_SECRET_KEY")
         
         if self.shop_id and self.secret_key:
             Configuration.account_id = self.shop_id
@@ -27,7 +26,7 @@ class YookassaService:
         amount: float,
         description: str,
         user_id: int,
-        return_url: str = f"https://t.me/{TELEGRAM_BOT_NICKNAME}",
+        return_url: str = f"https://t.me/{self.bot_nickname}",
         metadata: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """Создаёт платёж в ЮKassa"""

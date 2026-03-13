@@ -9,11 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from repositories.PaymentRepository import PaymentRepository
 
 class CryptomusService:
+
     def __init__(self):
 
-        self.api_key     = os.getenv("CRYPTOMUS_API_KEY")
-        self.merchant_id = os.getenv("CRYPTOMUS_MERCHANT_ID")
-        self.base_url    = "https://api.cryptomus.com/v1"
+        self.bot_nickname = os.getenv("TELEGRAM_BOT_NICKNAME", "mafioznikos_bot")
+        self.api_key      = os.getenv("CRYPTOMUS_API_KEY")
+        self.merchant_id  = os.getenv("CRYPTOMUS_MERCHANT_ID")
+        self.base_url     = "https://api.cryptomus.com/v1"
 
         if not self.api_key or not self.merchant_id:
             print("⚠️ CRYPTOMUS_API_KEY или CRYPTOMUS_MERCHANT_ID не настроены!")
@@ -47,15 +49,15 @@ class CryptomusService:
             metadata = {}
 
         metadata["user_id"] = str(user_id)
-        metadata["source"] = "twelvesteps_bot"
+        metadata["source"]  = "twelvesteps_bot"
 
         payload = {
             "amount": str(amount),
             "currency": currency,
             "order_id": f"order_{user_id}_{int(datetime.utcnow().timestamp())}",
             "description": description[:128],
-            "url_return": return_url or "https://t.me/mafioznikos_bot",
-            "url_success": return_url or "https://t.me/mafioznikos_bot",
+            "url_return": return_url or f"https://t.me/{self.bot_nickname}",
+            "url_success": return_url or f"https://t.me/{self.bot_nickname}",
             "metadata": metadata
         }
 
@@ -68,16 +70,20 @@ class CryptomusService:
         }
 
         try:
+
             response = requests.post(
                 f"{self.base_url}/payment",
                 json=payload,
                 headers=headers
             )
+
             response.raise_for_status()
             data = response.json()
 
             if data.get("result"):
+
                 result = data["result"]
+
                 return {
                     "id": result["uuid"],
                     "status": result["status"],
@@ -85,7 +91,9 @@ class CryptomusService:
                     "amount": result["amount"],
                     "currency": result["currency"]
                 }
+            
             else:
+
                 raise ValueError(f"Cryptomus error: {data.get('message')}")
 
         except Exception as e:
@@ -94,8 +102,9 @@ class CryptomusService:
 
     async def get_payment(self, payment_id: str) -> Dict:
         """Получить статус платежа"""
+
         payload = {"uuid": payment_id}
-        sign = self._generate_sign(payload)
+        sign    = self._generate_sign(payload)
 
         headers = {
             "merchant": self.merchant_id,
@@ -105,11 +114,13 @@ class CryptomusService:
 
         response = requests.post(
             f"{self.base_url}/payment/info",
-            json=payload,
-            headers=headers
+            json    = payload,
+            headers = headers
         )
-        data = response.json()
+        
+        data   = response.json()
         result = data.get("result", {})
+
         return {
             "id": result.get("uuid"),
             "status": result.get("status"),
@@ -121,12 +132,16 @@ class CryptomusService:
 
     def is_valid_webhook(self, body: bytes, signature: str) -> bool:
         """Проверка подписи webhook"""
+
         try:
+
             sign = hmac.new(
                 self.api_key.encode(),
                 body,
                 hashlib.sha256
             ).hexdigest()
+
             return sign == signature
+        
         except:
             return False
