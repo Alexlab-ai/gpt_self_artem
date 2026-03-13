@@ -53,9 +53,9 @@ def build_root_menu_markup() -> InlineKeyboardMarkup:
 
 def build_tariffs_menu_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🕐 Premium — в разработке", callback_data="tariff_premium_soon")],
-        [InlineKeyboardButton(text="📋 Открыть меню", callback_data="root_menu")],
-        [InlineKeyboardButton(text="❓ Помощь", callback_data="root_help")],
+        [InlineKeyboardButton(text="⭐ Оформить Premium", callback_data="tariff_buy_premium")],
+        [InlineKeyboardButton(text="👑 Оформить PRO", callback_data="tariff_buy_pro")],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="root_menu")],
     ])
 
 
