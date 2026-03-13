@@ -20,7 +20,7 @@ from bot.backend import (
 from bot.config import (
     build_main_menu_markup,
     build_error_markup,
-    build_exit_markup,
+
     build_root_menu_markup,
     build_tariffs_menu_markup,
     build_faq_menu_markup,
@@ -28,7 +28,7 @@ from bot.config import (
     build_profile_settings_markup,
 )
 from bot.utils import send_long_message
-from bot.onboarding import OnboardingStates, register_onboarding_handlers
+from bot.onboarding import OnboardingStates, WELCOME_TEXT, _build_start_markup, register_onboarding_handlers
 
 from .shared import (
     StepState,
@@ -179,13 +179,12 @@ async def handle_reset(message: Message, state: FSMContext) -> None:
         TOKEN_STORE[key] = access_token
         USER_CACHE[key] = user
 
-        needs_onboarding = is_new or not user.get("program_experience")
-
-        if needs_onboarding:
-            await state.set_state(OnboardingStates.display_name)
+        if is_new:
+            await state.set_state(OnboardingStates.welcome)
             await message.answer(
-                "🔄 Начинаем заново!\n\nПривет! Как к тебе обращаться?",
-                reply_markup=build_exit_markup()
+                WELCOME_TEXT,
+                reply_markup=_build_start_markup(),
+                parse_mode="MarkdownV2",
             )
         else:
             try:
@@ -331,12 +330,14 @@ async def handle_start(message: Message, state: FSMContext) -> None:
     TOKEN_STORE[key] = access_token
     USER_CACHE[key] = user
 
-    needs_onboarding = is_new or not user.get("program_experience")
-
-    if needs_onboarding:
+    if is_new:
         await state.clear()
-        await state.set_state(OnboardingStates.display_name)
-        await message.answer("Привет! Как к тебе обращаться?", reply_markup=build_exit_markup())
+        await state.set_state(OnboardingStates.welcome)
+        await message.answer(
+            WELCOME_TEXT,
+            reply_markup=_build_start_markup(),
+            parse_mode="MarkdownV2",
+        )
         return
 
     try:
