@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from aiogram import Dispatcher, F
 from aiogram.fsm.context import FSMContext
@@ -12,12 +13,15 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
     KeyboardButton,
+    FSInputFile,
 )
 
 from bot.backend import update_user_profile
 from bot.config import build_main_menu_markup
 
 logger = logging.getLogger(__name__)
+
+WELCOME_IMAGE = Path(__file__).parent / "assets" / "welcome.png"
 
 
 WELCOME_TEXT = (
@@ -57,6 +61,24 @@ def _build_skip_name_markup() -> ReplyKeyboardMarkup:
         resize_keyboard=True,
         one_time_keyboard=True,
     )
+
+
+async def send_welcome(message: Message) -> None:
+    """Send the welcome message — with image if available, otherwise text only."""
+    markup = _build_start_markup()
+    if WELCOME_IMAGE.exists():
+        await message.answer_photo(
+            photo=FSInputFile(WELCOME_IMAGE),
+            caption=WELCOME_TEXT,
+            reply_markup=markup,
+            parse_mode="MarkdownV2",
+        )
+    else:
+        await message.answer(
+            WELCOME_TEXT,
+            reply_markup=markup,
+            parse_mode="MarkdownV2",
+        )
 
 
 async def handle_welcome(message: Message, state: FSMContext) -> None:

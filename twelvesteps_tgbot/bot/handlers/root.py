@@ -28,7 +28,7 @@ from bot.config import (
     build_profile_settings_markup,
 )
 from bot.utils import send_long_message
-from bot.onboarding import OnboardingStates, WELCOME_TEXT, _build_start_markup, register_onboarding_handlers
+from bot.onboarding import OnboardingStates, send_welcome, register_onboarding_handlers
 
 from .shared import (
     StepState,
@@ -181,11 +181,7 @@ async def handle_reset(message: Message, state: FSMContext) -> None:
 
         if is_new:
             await state.set_state(OnboardingStates.welcome)
-            await message.answer(
-                WELCOME_TEXT,
-                reply_markup=_build_start_markup(),
-                parse_mode="MarkdownV2",
-            )
+            await send_welcome(message)
         else:
             try:
                 status = await BACKEND_CLIENT.get_status(access_token)
@@ -333,11 +329,7 @@ async def handle_start(message: Message, state: FSMContext) -> None:
     if is_new:
         await state.clear()
         await state.set_state(OnboardingStates.welcome)
-        await message.answer(
-            WELCOME_TEXT,
-            reply_markup=_build_start_markup(),
-            parse_mode="MarkdownV2",
-        )
+        await send_welcome(message)
         return
 
     try:
