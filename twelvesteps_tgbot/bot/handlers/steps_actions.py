@@ -137,6 +137,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             await state.update_data(action="save_draft")
             await state.set_state(StepState.answer_mode)
             draft_markup = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="✏️ Редактировать", callback_data="step_edit_last")],
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="step_back_from_answer")]
             ])
 
@@ -270,6 +271,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
 
             await state.update_data(action="save_draft", current_draft=existing_draft)
             draft_markup = InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="✏️ Редактировать", callback_data="step_edit_last")],
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="step_back_from_answer")]
             ])
 

@@ -447,15 +447,14 @@ def build_step_actions_markup(show_description: bool = False, **kwargs) -> Inlin
         desc_btn = InlineKeyboardButton(text="🧾 Описание шага", callback_data="step_show_description")
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="▶️ Продолжить", callback_data="step_continue"),
+            InlineKeyboardButton(text="✍️ Ответить", callback_data="step_continue"),
             InlineKeyboardButton(text="📋 Прогресс", callback_data="step_progress"),
         ],
         [
             InlineKeyboardButton(text="🧭 Помощь", callback_data="sos_help"),
-            InlineKeyboardButton(text="⏸ Черновик", callback_data="step_save_draft"),
         ],
         [desc_btn],
-        [InlineKeyboardButton(text="◀️ Назад", callback_data="steps_back")],
+        [InlineKeyboardButton(text="◀️ Назад", callback_data="steps_to_main")],
     ])
 
 
@@ -464,8 +463,6 @@ def build_step_answer_mode_markup() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="💾 Черновик", callback_data="step_save_draft"),
-            InlineKeyboardButton(text="✏️ Измени...", callback_data="step_edit_last"),
-            InlineKeyboardButton(text="🔄 Сбросить", callback_data="step_reset_draft")
         ],
         [
             InlineKeyboardButton(text="✔️ Сохранить и далее", callback_data="step_complete")
