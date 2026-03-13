@@ -642,3 +642,37 @@ class SubscriptionStatusResponse(BaseModel):
     is_active: bool
     expires_at: Optional[datetime] = None
     plan_type: Optional[str] = None
+
+# Cryptomus
+
+class CryptomusPaymentCreateRequest(BaseModel):
+    amount: float = Field(..., gt=0, description="Сумма платежа")
+    currency: str = Field(default="USD", description="Валюта (USD, EUR, RUB, BTC, USDT и др.)")
+    description: Optional[str] = Field(None, description="Описание платежа")
+    plan_type: str = Field("monthly", description="Тип подписки: monthly / yearly / 3_months")
+    return_url: Optional[str] = Field(None, description="URL возврата после оплаты")
+
+class CryptomusPaymentResponse(BaseModel):
+    id: str          # uuid от Cryptomus
+    status: str
+    payment_url: str
+    amount: str
+    currency: str
+
+class CryptomusWebhookRequest(BaseModel):
+    """Модель для webhook от Cryptomus"""
+    type: str
+    uuid: str
+    order_id: Optional[str] = None
+    amount: str
+    currency: str
+    status: str
+    metadata: Optional[dict] = None
+
+class CryptomusPaymentStatusResponse(BaseModel):
+    payment_id: str
+    status: str
+    paid: bool
+    amount: str
+    currency: str
+    description: Optional[str] = None

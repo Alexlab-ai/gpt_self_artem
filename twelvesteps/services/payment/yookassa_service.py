@@ -39,7 +39,7 @@ class YookassaService:
             metadata = {}
 
         metadata["user_id"] = str(user_id)
-        metadata["source"] = "12steps_bot"
+        metadata["source"] = "twelvesteps_bot"
 
         try:
 

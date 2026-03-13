@@ -8,9 +8,9 @@
 ### 4. Нажимай "Send Request" над каждым запросом
 
 @host = https://twelvesteps-backend.onrender.com
-@token = 
-@payment_id = 
-@bot_nickname = mafioznikos_bot
+@token = {$dotenv TEST_TOKEN}}
+@payment_id = {$dotenv YOOKASSA_PAYMENT_ID}}
+@bot_nickname = {$dotenv TELEGRAM_BOT_NICKNAME}}
 
 ### =============================================
 ### 1. Создать платёж — Monthly (990 ₽)
@@ -83,9 +83,59 @@ Authorization: Bearer {{token}}
 # }
 
 ### =============================================
+### CRYPTOMUS PAYMENT API — ТЕСТЫ (VS Code REST Client)
+### =============================================
+
+### 1. Создать платёж — Monthly (USD)
+POST {{host}}/payment/cryptomus/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": 9.90,
+  "currency": "USD",
+  "description": "Подписка GPT-SELF — monthly",
+  "plan_type": "monthly",
+  "return_url": "https://t.me/{{bot_nickname}}"
+}
+
+### 2. Создать платёж — Yearly (BTC/USDT)
+POST {{host}}/payment/cryptomus/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "amount": 29.90,
+  "currency": "USDT",
+  "description": "Подписка GPT-SELF — yearly",
+  "plan_type": "yearly",
+  "return_url": "https://t.me/{{bot_nickname}}"
+}
+
+### 3. Проверить статус платежа
+GET {{host}}/payment/cryptomus/status/{{payment_id}}
+Authorization: Bearer {{token}}
+
+### 4. Симуляция Webhook от Cryptomus
+# POST {{host}}/payment/cryptomus/webhook
+# Sign: test-signature-123
+# 
+# {
+#   "type": "payment",
+#   "uuid": "{{payment_id}}",
+#   "status": "paid",
+#   "amount": "9.90",
+#   "currency": "USD",
+#   "metadata": {
+#     "user_id": "123",
+#     "plan_type": "monthly"
+#   }
+# }
+
+### =============================================
 ### Полезные советы:
 ### • Что бы получить @token 
-### • Зайди в Render Dashboard → твоя БД (PostgreSQL) → Query Editor
+### • Скопируй полный External Database URL
 ### • Выполни запрос: SELECT api_key FROM users LIMIT 1;
 ### • После /create скопируй "confirmation_url" из ответа и открой в браузере
 ### • После оплаты скопируй payment.id и вставь в переменную @payment_id сверху
