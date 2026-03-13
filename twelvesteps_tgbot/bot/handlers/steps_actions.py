@@ -135,6 +135,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             draft_text += "Напиши ответ:"
 
             await state.update_data(action="save_draft")
+            await state.set_state(StepState.answer_mode)
             draft_markup = InlineKeyboardMarkup(inline_keyboard=[
                 [InlineKeyboardButton(text="◀️ Назад", callback_data="step_back_from_answer")]
             ])
@@ -231,6 +232,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                 await callback.answer()
             else:
                 await callback.answer("Предыдущий ответ не найден")
+            return
 
         if data == "step_view_draft":
             logger.info(f"Getting draft for user {telegram_id}")
@@ -281,11 +283,8 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
             step_data = await get_current_step_question(telegram_id, username, first_name)
             if step_data:
                 response_text = step_data.get("message", "")
-                if response_text and progress_indicator:
-                    full_text = (
-                        f"{progress_indicator}\n\n"
-                        f"{response_text}"
-                    )
+                if response_text:
+                    full_text = f"{progress_indicator}\n\n{response_text}" if progress_indicator else response_text
                     await state.update_data(current_draft="")
                     await callback.message.edit_text(
                         full_text,
@@ -345,6 +344,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
 
             # No draft — ask user to type answer
             await state.update_data(action="complete")
+            await state.set_state(StepState.answer_mode)
             step_data = await get_current_step_question(telegram_id, username, first_name)
             current_question_text = step_data.get("message", "") if step_data else ""
 
@@ -384,7 +384,7 @@ async def handle_step_action_callback(callback: CallbackQuery, state: FSMContext
                     callback,
                     f"📖 О шаге\n\n{description}",
                     reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text="◀️ Назад", callback_data="step_continue")]
+                        [InlineKeyboardButton(text="◀️ Назад", callback_data="step_back_from_answer")]
                     ])
                 )
                 await callback.answer()

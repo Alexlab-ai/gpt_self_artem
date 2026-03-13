@@ -326,7 +326,7 @@ def build_step_questions_markup(questions: list[dict], step_id: int) -> InlineKe
                 callback_data=f"questions_group_{step_id}_{g}"
             )])
 
-    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="step_progress")])
+    buttons.append([InlineKeyboardButton(text="◀️ Назад", callback_data="steps_back")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
 
