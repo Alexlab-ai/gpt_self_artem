@@ -656,3 +656,62 @@ class Gratitude(Base):
     )
 
     user: Mapped["User"] = relationship()
+
+# Модель Subscription
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
+        index=True
+    )
+
+    status: Mapped[str] = mapped_column(String(20), default="free")  # free / active / trial / expired / cancelled
+    plan: Mapped[str] = mapped_column(String(20), default="free")    # free / premium
+
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    trial_ends_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+    payment_provider: Mapped[Optional[str]] = mapped_column(String(20))  # yookassa / cryptomus
+    payment_id: Mapped[Optional[str]] = mapped_column(String(100))
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="subscription", uselist=False)
+
+    subscription: Mapped[Optional["Subscription"]] = relationship(
+        "Subscription", back_populates="user", uselist=False
+    )
+
+    @property
+    def is_premium(self) -> bool:
+        """Быстрая проверка активной подписки (включая trial)"""
+
+        if not self.subscription:
+            return False
+        
+        sub = self.subscription
+
+        if sub.status not in ("active", "trial"):
+            return False
+        
+        now = datetime.utcnow()
+
+        if sub.expires_at and sub.expires_at < now:
+            return False
+        
+        if sub.trial_ends_at and sub.trial_ends_at < now:
+            return False
+        
+        return True

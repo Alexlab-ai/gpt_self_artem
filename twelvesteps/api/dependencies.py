@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from db.database import async_session_factory
 from db.models import User as UserModel
 from repositories.UserRepository import UserRepository
-
+from repositories.SubscriptionRepository import SubscriptionRepository
 
 @dataclass
 class CurrentUserContext:
@@ -76,3 +76,15 @@ async def get_current_user(
     await session.commit()
 
     return CurrentUserContext(user=user, session=session)
+
+async def require_premium(
+    current_context: CurrentUserContext = Depends(get_current_user)
+) -> CurrentUserContext:
+    """Только для платных эндпоинтов"""
+
+    repo = SubscriptionRepository(current_context.session)
+
+    if not await repo.is_premium_active(current_context.user.id):
+        raise HTTPException(status_code=403, detail="Premium subscription required")
+    
+    return current_context

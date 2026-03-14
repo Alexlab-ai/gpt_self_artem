@@ -2,6 +2,9 @@ import os
 from fastapi import APIRouter, Depends, HTTPException, Request, Header
 from typing import Optional
 
+from repositories.SubscriptionRepository import SubscriptionRepository
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from api.dependencies import CurrentUserContext, get_current_user, get_db, get_db_session
 from api.schemas import (
     YookassaPaymentCreateRequest,
@@ -67,7 +70,8 @@ async def get_payment_status(
 @router.post("/webhook")
 async def yookassa_webhook(
     request: Request,
-    x_yookassa_signature: Optional[str] = Header(None, alias="X-Yookassa-Signature")
+    x_yookassa_signature: Optional[str] = Header(None, alias="X-Yookassa-Signature"),
+    session: AsyncSession = Depends(get_db_session)
 ):
     """Webhook от ЮKassa — обработка успешного платежа"""
     body = await request.body()
@@ -97,13 +101,9 @@ async def yookassa_webhook(
         user_id = int(user_id_str)
 
         # Работа с подпиской
-        from repositories.SubscriptionRepository import SubscriptionRepository
         from datetime import datetime, timedelta
-        from sqlalchemy.ext.asyncio import AsyncSession
 
         # Получаем сессию
-        
-        session: AsyncSession = Depends(get_db_session)
         sub_repo = SubscriptionRepository(session)
 
         # Определяем длительность подписки
@@ -138,12 +138,10 @@ async def yookassa_webhook(
         else:
 
             # Создаём новую подписку
-            new_sub = await sub_repo.create(
+            await sub_repo.create_or_renew(
                 user_id          = user_id,
-                status           = "active",
                 plan             = plan_str,
-                started_at       = now,
-                expires_at       = expires,
+                duration_days    = duration_days,
                 payment_provider = "yookassa",
                 payment_id       = payment_id
             )
@@ -219,7 +217,8 @@ async def get_cryptomus_payment_status(
 @cryptomus_router.post("/webhook")
 async def cryptomus_webhook(
     request: Request,
-    sign: Optional[str] = Header(None, alias="Sign")
+    sign: Optional[str] = Header(None, alias="Sign"),
+    session: AsyncSession = Depends(get_db_session)
 ):
     """Webhook от Cryptomus — обработка успешного платежа"""
 
@@ -248,11 +247,9 @@ async def cryptomus_webhook(
 
         user_id = int(user_id_str)
 
-        from repositories.SubscriptionRepository import SubscriptionRepository
         from datetime import datetime, timedelta
 
         # Получаем сессию
-        session: AsyncSession = Depends(get_db_session)
         sub_repo = SubscriptionRepository(session)
 
         if plan_type == "yearly":
@@ -279,12 +276,10 @@ async def cryptomus_webhook(
 
         else:
 
-            new_sub = await sub_repo.create(
+            await sub_repo.create_or_renew(
                 user_id          = user_id,
-                status           = "active",
                 plan             = plan_str,
-                started_at       = now,
-                expires_at       = expires,
+                duration_days    = duration_days,
                 payment_provider = "cryptomus",
                 payment_id       = payment_id
             )
