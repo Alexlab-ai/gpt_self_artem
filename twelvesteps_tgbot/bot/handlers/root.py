@@ -346,11 +346,12 @@ async def send_welcome_back(message: Message, user: dict, status: dict) -> None:
 
     text = f"С возвращением, {display_name}!"
     if open_question:
-        text += "\n\nУ тебя есть незавершённый шаг. Нажми /steps, чтобы продолжить."
-    else:
-        text += "\n\nЯ готов общаться. Напиши мне что-нибудь или нажми /steps."
+        text += "\n\nУ тебя есть незавершённый шаг."
 
+    # Show persistent keyboard
     await message.answer(text, reply_markup=build_main_menu_markup())
+    # Immediately show inline menu so user lands in menu right away
+    await message.answer("📋 Меню\n\nВыбери раздел:", reply_markup=build_root_menu_markup())
 
 
 def register_handlers(dp: Dispatcher) -> None:
